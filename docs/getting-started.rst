@@ -1,6 +1,16 @@
 Getting started
 ===============
 
-This is where you describe how to get set up on a clean install, including the
-commands necessary to get the raw data (using the `sync_data_from_s3` command,
-for example), and then how to make the cleaned, final data sets.
+install this project in its own virtual environment using conda.
+install miniconda if needed.
+
+pip install miniconda
+conda activate rlalm
+using pip install . 
+conda install requirements.txt
+
+Get initial data from external sources.
+=======================================
+
+
+
