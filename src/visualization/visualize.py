@@ -43,10 +43,33 @@ def lineplot(
         ax.set_xlabel(x_label)
     if y_label:
         ax.set_ylabel(y_label)
-    
-
     plt.savefig(Path(figurepath, name + ".svg"), bbox_inches="tight");
+    return ax
 
+def barplot(
+    data: pd.DataFrame,
+    x: str,
+    y: str,
+    x_label: str = "",
+    y_label: str = "",
+    hue: str = "",
+    figsize: Tuple[int, int] = figsize,
+    name: str = "lineplot",
+    title: str = "" ,
+    figurepath: Path = Path("../reports/figures"),
+) -> plt.Axes:
+    """simple line plot"""
 
-
+    plt.figure(figsize=figsize)
+    if hue == '':        
+        ax = sns.barplot(data=data, x=x, y=y)
+    else:
+        ax = sns.barplot(data=data, x=x, y=y, hue=hue)        
+    ax.set_title(title)
+    
+    if x_label:
+        ax.set_xlabel(x_label)
+    if y_label:
+        ax.set_ylabel(y_label)
+    plt.savefig(Path(figurepath, name + ".svg"), bbox_inches="tight");
     return ax
