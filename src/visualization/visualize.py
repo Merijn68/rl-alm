@@ -1,4 +1,3 @@
-
 import seaborn as sns
 import pandas as pd
 import numpy as np
@@ -7,6 +6,7 @@ from matplotlib import pyplot as plt
 from pathlib import Path
 from typing import Tuple
 
+from src.data.definitions import FIGURES_PATH
 
 # Generic setup parameters for Matplotlib
 figsize = (10, 6)
@@ -27,24 +27,25 @@ def lineplot(
     hue: str = "",
     figsize: Tuple[int, int] = figsize,
     name: str = "lineplot",
-    title: str = "" ,
-    figurepath: Path = Path("../reports/figures"),
+    title: str = "",
+    figurepath: Path = Path(FIGURES_PATH),
 ) -> plt.Axes:
     """simple line plot"""
 
     plt.figure(figsize=figsize)
-    if hue == '':
+    if hue == "":
         ax = sns.lineplot(data=data, x=x, y=y)
     else:
         ax = sns.lineplot(data=data, x=x, y=y, hue=hue)
     ax.set_title(title)
-    
+
     if x_label:
         ax.set_xlabel(x_label)
     if y_label:
         ax.set_ylabel(y_label)
-    plt.savefig(Path(figurepath, name + ".svg"), bbox_inches="tight");
+    plt.savefig(Path(figurepath, name + ".svg"), bbox_inches="tight")
     return ax
+
 
 def barplot(
     data: pd.DataFrame,
@@ -55,21 +56,21 @@ def barplot(
     hue: str = "",
     figsize: Tuple[int, int] = figsize,
     name: str = "lineplot",
-    title: str = "" ,
+    title: str = "",
     figurepath: Path = Path("../reports/figures"),
 ) -> plt.Axes:
     """simple line plot"""
 
     plt.figure(figsize=figsize)
-    if hue == '':        
+    if hue == "":
         ax = sns.barplot(data=data, x=x, y=y)
     else:
-        ax = sns.barplot(data=data, x=x, y=y, hue=hue)        
+        ax = sns.barplot(data=data, x=x, y=y, hue=hue)
     ax.set_title(title)
-    
+
     if x_label:
         ax.set_xlabel(x_label)
     if y_label:
         ax.set_ylabel(y_label)
-    plt.savefig(Path(figurepath, name + ".svg"), bbox_inches="tight");
+    plt.savefig(Path(figurepath, name + ".svg"), bbox_inches="tight")
     return ax
