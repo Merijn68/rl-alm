@@ -13,6 +13,7 @@ def test_interest_read_data():
     interest.read_data()
     assert len(interest.df) > 100
 
+
 def test_interest_set_period():
     interest = dataset.Interest()
     end = datetime.now().date()
@@ -20,6 +21,7 @@ def test_interest_set_period():
     start = start.to_pydatetime().date()
     interest.set_period(start, end)
     assert interest.get_period() == (start, end)
+
 
 def test_load_rates():
     i = dataset.Interest()
@@ -32,6 +34,3 @@ def test_load_rates():
         i.df.reset_index(drop=True).all().all()
         == i2.df.reset_index(drop=True).all().all()
     )
-
-
-
