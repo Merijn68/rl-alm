@@ -11,6 +11,10 @@ from dateutil.relativedelta import relativedelta
 from src.models import predict
 from src.visualization import visualize
 from src.data import dataset
+from src.data.zerocurve import Zerocurve
+from src.data.interest import Interest
+
+MORTGAGE_AMOUNT = 200000  # fixed amount for now
 
 
 class Bankmodel:
@@ -93,7 +97,7 @@ class Bankmodel:
             ),
             axis=1,
         )
-        df["principal"] = 200000  # fixed amount for now
+        df["principal"] = MORTGAGE_AMOUNT 
         df["period"] = (
             df["start_date"].to_numpy().astype("datetime64[M]")
         )  # trick to get 1th of the month
@@ -113,11 +117,12 @@ class Bankmodel:
         return df
 
     def reset(self):
+        # Reset should reset to initial position - not just wipe them out...
         self.pos_date = self.origin_pos_date
-        self.df_cashflows = pd.DataFrame()
-        self.df_mortgages = pd.DataFrame()
+        # self.df_cashflows = pd.DataFrame()
+        # self.df_mortgages = pd.DataFrame()
 
-    def calculate_returns(self, zerocurve: dataset.Zerocurve):
+    def calculate_returns(self, zerocurve: Zerocurve):
         """Calculate the NPV of the cashflows given the zero curve"""
         pos_date = self.pos_date
         df_forward = zerocurve.interpolate(pos_date)

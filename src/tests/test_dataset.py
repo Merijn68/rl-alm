@@ -13,7 +13,6 @@ def test_interest_read_data():
     interest.read_data()
     assert len(interest.df) > 100
 
-
 def test_interest_set_period():
     interest = dataset.Interest()
     end = datetime.now().date()
@@ -21,26 +20,6 @@ def test_interest_set_period():
     start = start.to_pydatetime().date()
     interest.set_period(start, end)
     assert interest.get_period() == (start, end)
-
-
-def test_zerocurve_read_data():
-    zero = dataset.Zerocurve()
-    end = datetime.now().date()
-    start = end - DateOffset(months=1)
-    start = start.to_pydatetime().date()
-    zero.set_period(start, end)
-    zero.read_data()
-    assert len(zero.df) > 100
-
-
-def test_zero_set_period():
-    zero = dataset.Zerocurve()
-    end = datetime.now().date()
-    start = end - DateOffset(months=1)
-    start = start.to_pydatetime().date()
-    zero.set_period(start, end)
-    assert zero.get_period() == (start, end)
-
 
 def test_load_rates():
     i = dataset.Interest()
@@ -55,12 +34,4 @@ def test_load_rates():
     )
 
 
-def main():
-    zerocurve = dataset.Zerocurve()
-    zerocurve.load_data()    
-    zerocurve.reset()
-    zerocurve.step()
 
-
-if __name__ == "__main__":
-    main()
