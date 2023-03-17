@@ -1,7 +1,9 @@
 # test dataset
 
 import pytest
-from src.data import dataset
+
+from src.data.interest import Interest
+
 from pandas.tseries.offsets import DateOffset
 from dateutil.parser import parse
 from pandas.tseries.offsets import BDay
@@ -9,13 +11,13 @@ from datetime import datetime
 
 
 def test_interest_read_data():
-    interest = dataset.Interest()
+    interest = Interest()
     interest.read_data()
     assert len(interest.df) > 100
 
 
 def test_interest_set_period():
-    interest = dataset.Interest()
+    interest = Interest()
     end = datetime.now().date()
     start = end - DateOffset(months=1)
     start = start.to_pydatetime().date()
@@ -24,11 +26,11 @@ def test_interest_set_period():
 
 
 def test_load_rates():
-    i = dataset.Interest()
+    i = Interest()
     i.read_data()
     i.save_data()
 
-    i2 = dataset.Interest()
+    i2 = Interest()
     i2.load_data()
     assert (
         i.df.reset_index(drop=True).all().all()

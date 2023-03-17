@@ -1,5 +1,4 @@
 import pytest
-from src.data import dataset
 from pandas.tseries.offsets import DateOffset
 from dateutil.parser import parse
 from pandas.tseries.offsets import BDay
@@ -7,15 +6,8 @@ from datetime import datetime
 from src.data.zerocurve import Zerocurve
 
 
-def main():
-    zerocurve = dataset.Zerocurve()
-    zerocurve.load_data()
-    zerocurve.reset()
-    zerocurve.step()
-
-
 def test_zerocurve_read_data():
-    zero = dataset.Zerocurve()
+    zero = Zerocurve()
     end = datetime.now().date()
     start = end - DateOffset(months=1)
     start = start.to_pydatetime().date()
@@ -25,7 +17,7 @@ def test_zerocurve_read_data():
 
 
 def test_zero_set_period():
-    zero = dataset.Zerocurve()
+    zero = Zerocurve()
     end = datetime.now().date()
     start = end - DateOffset(months=1)
     start = start.to_pydatetime().date()
