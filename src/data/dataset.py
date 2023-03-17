@@ -29,6 +29,7 @@ class ECBData:
         return self._start_date_, self._end_date_
 
     def read_data(self):
+        logger.info(f"reading {self.name} data from ESW.")
         url = self._url_
         key = self._key_
         parameters = {
@@ -47,6 +48,7 @@ class ECBData:
         return response
 
     def load_data(self):
+        logger.info(f"loading {self.name} data from file.")
         data = Path(DATA_RAW, f"{self.name}.csv")
         if data.exists():
             self.df = pd.read_csv(data)
@@ -56,6 +58,7 @@ class ECBData:
             )
 
     def save_data(self):
+        logger.info(f"saving {self.name} data to file.")
         self.df.to_csv(Path(DATA_RAW, f"{self.name}.csv"))
 
 
@@ -84,7 +87,6 @@ class Interest(ECBData):
         )
 
     def read_data(self):
-        logger.info("reading interest data from ESW.")
         response = super().read_data()
         df = self.df
         if df.empty:
@@ -120,6 +122,7 @@ class Interest(ECBData):
     def load_data(self):
         super().load_data()
         df = self.df
+        df["period"] = pd.to_datetime(df["period"])
         df.set_index("period", inplace=True)
         df.sort_values(["period", "fixed_period"], inplace=True)
         self.df = df
@@ -146,7 +149,7 @@ class Zerocurve(ECBData):
             f"{DATAFLOW}/{FREQ}.{REF_AREA}.{CURRENCY}.{PROVIDER_FM}."
             f"{INSTRUMENT_FM}.{PROVIDER_FM_ID}.{DATA_TYPE_FM}"
         )
-        self.timestep = 0
+        self.mu = np.NaN
 
     def _offset_days_(self, row):
         if row.unit == "Months":
@@ -155,7 +158,6 @@ class Zerocurve(ECBData):
             return row.rate_dt + DateOffset(years=row.number)
 
     def read_data(self) -> pd.DataFrame:
-        logger.info("reading zero curve data from ESW.")
         response = super().read_data()
         df = self.df
         if df.empty:
@@ -200,13 +202,12 @@ class Zerocurve(ECBData):
 
         self.df = df
         self.yield_data = self.df.pivot(columns="tenor", values="rate")
-        self._calculate_()
-
         return response
 
-    def _calculate_(self):
+    def calculate(self):
         """Calculate statistics (mu and sigma) for simulating rates"""
-        rate_changes = np.log(1 + self.yield_data.pct_change()).dropna()
+        df = self.yield_data.pct_change().dropna()
+        rate_changes = np.log1p(df)
         self.mu = rate_changes.mean().values
         self.sigma = rate_changes.std().values
 
@@ -235,22 +236,32 @@ class Zerocurve(ECBData):
             title="Zero curve, yield curve, governement bond triple A Euro Area",
         )
 
+    def load_data(self):
+        super().load_data()
+        df = self.df
+        df["rate_dt"] = pd.to_datetime(df["rate_dt"])
+        df["value_dt"] = pd.to_datetime(df["value_dt"])
+        df.set_index("rate_dt", inplace=True)
+        df.sort_values(["rate_dt", "value_dt"], inplace=True)
+        self.df = df
+
     def step(self, dt=1 / 252):
         # Move one step forward in time, generating simulated data for one day
         yield_data = self.yield_data
         mu = self.mu
         sigma = self.sigma
-        r0 = yield_data[-1].values
+        r0 = yield_data.iloc[-1].values
         r1 = np.exp(
             predict.vasicek(np.log(r0), mu, sigma, dt)
         )  # Exponentiate the predicted log return
-        next_day = yield_data.index(-1) + BDay(1)
+        next_day = yield_data.index[-1] + BDay(1)
+        logger.debug(f"Stepping in zerocurve {next_day}, {r1}")
         self.yield_data.loc[next_day] = r1
-        self.timestep = self.timestep + 1
 
     def reset(self):
         # Reset the time to the origin
         self.yield_data = self.df.pivot(columns="tenor", values="rate")
+        self.calculate()
 
 
 class Inflation(ECBData):
@@ -272,7 +283,6 @@ class Inflation(ECBData):
         )
 
     def read_data(self):
-        logger.info("reading inflation data from ESW.")
         response = super().read_data()
         df = self.df
         if df.empty:

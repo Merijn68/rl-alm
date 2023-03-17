@@ -56,21 +56,10 @@ def test_load_rates():
 
 
 def main():
-    i = dataset.Interest()
-    response = i.read_data()
-    print(response.url)
-    print(i.df)
-
-    i.save_data()
-
-    i2 = dataset.Interest()
-    i2.load_data()
-
-    print(i2.df)
-    assert (
-        i.df.reset_index(drop=True).all().all()
-        == i2.df.reset_index(drop=True).all().all()
-    )
+    zerocurve = dataset.Zerocurve()
+    zerocurve.load_data()    
+    zerocurve.reset()
+    zerocurve.step()
 
 
 if __name__ == "__main__":

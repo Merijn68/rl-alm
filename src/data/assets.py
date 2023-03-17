@@ -2,11 +2,15 @@
 import pandas as pd
 import numpy as np
 import datetime
+from loguru import logger
 from pandas.tseries.offsets import BDay
 from pandas.tseries.offsets import DateOffset
+from datetime import timedelta
 from random import randrange
 from dateutil.relativedelta import relativedelta
 from src.models import predict
+from src.visualization import visualize
+from src.data import dataset
 
 
 class Bankmodel:
@@ -16,6 +20,7 @@ class Bankmodel:
         self.df_cashflows = pd.DataFrame()
         self.df_mortgages = pd.DataFrame()
         self.pos_date = pos_date
+        self.origin_pos_date = pos_date
 
     def _random_date_(self, start: datetime, end: datetime) -> datetime:
         """return a random business date between start and end date"""
@@ -57,7 +62,7 @@ class Bankmodel:
     def _generate_mortgage_cashflows_(self, contracts: pd.DataFrame) -> pd.DataFrame:
         mortgage_tenor = 30
         dfs = []
-        for index, row in contracts.iterrows():
+        for _, row in contracts.iterrows():
             cf = self._generate_mortgage_cashflow_(
                 row.principal, row.interest / 100, mortgage_tenor, row.years
             )
@@ -68,6 +73,7 @@ class Bankmodel:
         return df_all
 
     def generate_mortgage_contracts(self, n: int, df_i: pd.DataFrame):
+        """Generate a portfolio of mortgages"""
         # Generate mortgage portfolio of n mortgages, active at pos_date
         # probability of 10 years contracts is 10x higher then 1 year contract
         # as they can start 10 years before.
@@ -75,10 +81,10 @@ class Bankmodel:
         category = np.random.choice(a=[0, 1, 2, 3], size=n, p=[0.03, 0.14, 0.23, 0.60])
         df = pd.DataFrame()
         df["category"] = category
-        d = {0: "<= 1 year", 1: "1>5 years", 2: "5>10 years", 3: "> 10 years"}
+        d = {0: "<= 1 year", 1: "1>5 years", 2: "5>10 years", 3: ">10 years"}
         df["fixed_period"] = df["category"].map(d).astype("category")
         df["fixed_period"].cat.set_categories(
-            ["<= 1 year", "1>5 years", "5>10 years", "> 10 years"], ordered=True
+            ["<= 1 year", "1>5 years", "5>10 years", ">10 years"], ordered=True
         )
         df["years"] = df["category"].map({0: 1, 1: 5, 2: 10, 3: 20})
         df["start_date"] = df.apply(
@@ -87,28 +93,43 @@ class Bankmodel:
             ),
             axis=1,
         )
-        df["principal"] = 322000
+        df["principal"] = 200000  # fixed amount for now
         df["period"] = (
             df["start_date"].to_numpy().astype("datetime64[M]")
         )  # trick to get 1th of the month
         df = df.merge(df_i.reset_index(), how="left", on=["period", "fixed_period"])
-        print(df.dtypes)
+        df["interest"] = df["interest"].fillna(
+            df_i["interest"].iloc[-1]
+        )  # fill missing values with last coupon rate - not a nice solution
+        df["contract"] = np.arange(len(df))  # assign a contract id
 
-        df["interest"].fillna(df_i["interest"].tail(1), inplace=True)
-        df["contract"] = np.arange(len(df))
+        self.df_mortgages = pd.concat([self.df_mortgages, df])
+        logger.info(f"Added {len(df)} mortgages to our portfolio.")
 
-        print("contracts generated - now the cashflows")
-
-        self._generate_mortgage_cashflows_(df)
-
-        self.df_cashflows.append(self.df_cashflows)
-        self.df_mortgages.append(df)
+        df_cashflows = self._generate_mortgage_cashflows_(df)
+        self.df_cashflows = pd.concat([self.df_cashflows, df_cashflows])
+        logger.info(f"Added {len(df_cashflows)} cashflows to our model.")
 
         return df
 
     def reset(self):
+        self.pos_date = self.origin_pos_date
         self.df_cashflows = pd.DataFrame()
         self.df_mortgages = pd.DataFrame()
+
+    def calculate_returns(self, zerocurve: dataset.Zerocurve):
+        """Calculate the NPV of the cashflows given the zero curve"""
+        pos_date = self.pos_date
+        df_forward = zerocurve.interpolate(pos_date)
+        df_c = self.df_cashflows
+        df_npv = df_c.merge(df_forward, left_on="value_dt", right_on=df_forward.index)
+        df_npv["pos_dt"] = pos_date
+        df_npv["year_frac"] = round(
+            (df_npv["value_dt"] - df_npv["pos_dt"]) / timedelta(365, 0, 0, 0), 5
+        )
+        df_npv["df"] = 1 / (1 + df_npv["rate"] / 100) ** df_npv["year_frac"]
+        df_npv["npv"] = round(df_npv["cashflow"] * df_npv["df"], 2)
+        return df_npv["npv"].sum()
 
     def plot_contracts(self):
         """Simple stacked barplot of outstanding contracts"""
@@ -133,3 +154,19 @@ class Bankmodel:
         # Cut off all cashflows prior to position date
         df = self.df_cashflows
         df_c = df[df["value_dt"] > self.pos_date]
+        df_show = df_c[["cashflow"]].groupby(df_c["value_dt"].dt.strftime("%Y")).sum()
+        df_show["cashflow"] = df_show["cashflow"] / 1000
+        ax = visualize.barplot(
+            df_show,
+            x=df_show.index,
+            y="cashflow",
+            x_label="year",
+            y_label="amount (x 1000)",
+            title="sum of cashflows per year",
+        )
+        # using format string '{:.0f}' here but you can choose others
+        ax.set_yticks(ax.get_yticks())
+        ax.set_yticklabels(["{:0.0f}".format(x) for x in ax.get_yticks().tolist()])
+
+    def step(self):
+        self.pos_date = self.pos_date + BDay(1)
