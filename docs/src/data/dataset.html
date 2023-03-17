@@ -1,0 +1,1091 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
+<meta name="generator" content="pdoc 0.10.0" />
+<title>src.data.dataset API documentation</title>
+<meta name="description" content="" />
+<link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/sanitize.min.css" integrity="sha256-PK9q560IAAa6WVRRh76LtCaI8pjTJ2z11v0miyNNjrs=" crossorigin>
+<link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/typography.min.css" integrity="sha256-7l/o7C8jubJiy74VsKTidCy1yBkRtiUGbVkYBylBqUg=" crossorigin>
+<link rel="stylesheet preload" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.1.1/styles/github.min.css" crossorigin>
+<style>:root{--highlight-color:#fe9}.flex{display:flex !important}body{line-height:1.5em}#content{padding:20px}#sidebar{padding:30px;overflow:hidden}#sidebar > *:last-child{margin-bottom:2cm}.http-server-breadcrumbs{font-size:130%;margin:0 0 15px 0}#footer{font-size:.75em;padding:5px 30px;border-top:1px solid #ddd;text-align:right}#footer p{margin:0 0 0 1em;display:inline-block}#footer p:last-child{margin-right:30px}h1,h2,h3,h4,h5{font-weight:300}h1{font-size:2.5em;line-height:1.1em}h2{font-size:1.75em;margin:1em 0 .50em 0}h3{font-size:1.4em;margin:25px 0 10px 0}h4{margin:0;font-size:105%}h1:target,h2:target,h3:target,h4:target,h5:target,h6:target{background:var(--highlight-color);padding:.2em 0}a{color:#058;text-decoration:none;transition:color .3s ease-in-out}a:hover{color:#e82}.title code{font-weight:bold}h2[id^="header-"]{margin-top:2em}.ident{color:#900}pre code{background:#f8f8f8;font-size:.8em;line-height:1.4em}code{background:#f2f2f1;padding:1px 4px;overflow-wrap:break-word}h1 code{background:transparent}pre{background:#f8f8f8;border:0;border-top:1px solid #ccc;border-bottom:1px solid #ccc;margin:1em 0;padding:1ex}#http-server-module-list{display:flex;flex-flow:column}#http-server-module-list div{display:flex}#http-server-module-list dt{min-width:10%}#http-server-module-list p{margin-top:0}.toc ul,#index{list-style-type:none;margin:0;padding:0}#index code{background:transparent}#index h3{border-bottom:1px solid #ddd}#index ul{padding:0}#index h4{margin-top:.6em;font-weight:bold}@media (min-width:200ex){#index .two-column{column-count:2}}@media (min-width:300ex){#index .two-column{column-count:3}}dl{margin-bottom:2em}dl dl:last-child{margin-bottom:4em}dd{margin:0 0 1em 3em}#header-classes + dl > dd{margin-bottom:3em}dd dd{margin-left:2em}dd p{margin:10px 0}.name{background:#eee;font-weight:bold;font-size:.85em;padding:5px 10px;display:inline-block;min-width:40%}.name:hover{background:#e0e0e0}dt:target .name{background:var(--highlight-color)}.name > span:first-child{white-space:nowrap}.name.class > span:nth-child(2){margin-left:.4em}.inherited{color:#999;border-left:5px solid #eee;padding-left:1em}.inheritance em{font-style:normal;font-weight:bold}.desc h2{font-weight:400;font-size:1.25em}.desc h3{font-size:1em}.desc dt code{background:inherit}.source summary,.git-link-div{color:#666;text-align:right;font-weight:400;font-size:.8em;text-transform:uppercase}.source summary > *{white-space:nowrap;cursor:pointer}.git-link{color:inherit;margin-left:1em}.source pre{max-height:500px;overflow:auto;margin:0}.source pre code{font-size:12px;overflow:visible}.hlist{list-style:none}.hlist li{display:inline}.hlist li:after{content:',\2002'}.hlist li:last-child:after{content:none}.hlist .hlist{display:inline;padding-left:1em}img{max-width:100%}td{padding:0 .5em}.admonition{padding:.1em .5em;margin-bottom:1em}.admonition-title{font-weight:bold}.admonition.note,.admonition.info,.admonition.important{background:#aef}.admonition.todo,.admonition.versionadded,.admonition.tip,.admonition.hint{background:#dfd}.admonition.warning,.admonition.versionchanged,.admonition.deprecated{background:#fd4}.admonition.error,.admonition.danger,.admonition.caution{background:lightpink}</style>
+<style media="screen and (min-width: 700px)">@media screen and (min-width:700px){#sidebar{width:30%;height:100vh;overflow:auto;position:sticky;top:0}#content{width:70%;max-width:100ch;padding:3em 4em;border-left:1px solid #ddd}pre code{font-size:1em}.item .name{font-size:1em}main{display:flex;flex-direction:row-reverse;justify-content:flex-end}.toc ul ul,#index ul{padding-left:1.5em}.toc > ul > li{margin-top:.5em}}</style>
+<style media="print">@media print{#sidebar h1{page-break-before:always}.source{display:none}}@media print{*{background:transparent !important;color:#000 !important;box-shadow:none !important;text-shadow:none !important}a[href]:after{content:" (" attr(href) ")";font-size:90%}a[href][title]:after{content:none}abbr[title]:after{content:" (" attr(title) ")"}.ir a:after,a[href^="javascript:"]:after,a[href^="#"]:after{content:""}pre,blockquote{border:1px solid #999;page-break-inside:avoid}thead{display:table-header-group}tr,img{page-break-inside:avoid}img{max-width:100% !important}@page{margin:0.5cm}p,h2,h3{orphans:3;widows:3}h1,h2,h3,h4,h5,h6{page-break-after:avoid}}</style>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.1.1/highlight.min.js" integrity="sha256-Uv3H6lx7dJmRfRvH8TH6kJD1TSK1aFcwgx+mdg3epi8=" crossorigin></script>
+<script>window.addEventListener('DOMContentLoaded', () => hljs.initHighlighting())</script>
+</head>
+<body>
+<main>
+<article id="content">
+<header>
+<h1 class="title">Module <code>src.data.dataset</code></h1>
+</header>
+<section id="section-intro">
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">import requests
+import pandas as pd
+import numpy as np
+import io
+from pandas.tseries.offsets import DateOffset
+from pandas.tseries.offsets import BDay
+from loguru import logger
+from datetime import datetime
+from dateutil.parser import parse
+from pathlib import Path
+
+from src.visualization import visualize
+from src.models import predict
+from src.data.definitions import DATA_RAW
+
+
+class ECBData:
+    def __init__(self):
+        self._url_ = &#34;https://sdw-wsrest.ecb.europa.eu/service/data/&#34;
+        self._start_date_ = parse(&#34;2003-01-01&#34;)
+        self._end_date_ = parse(&#34;2023-02-28&#34;)
+        self.df = pd.DataFrame()
+
+    def set_period(self, start_date: datetime, end_date: datetime):
+        self._start_date_ = start_date
+        self._end_date_ = end_date
+
+    def get_period(self) -&gt; tuple[datetime, datetime]:
+        return self._start_date_, self._end_date_
+
+    def read_data(self):
+        url = self._url_
+        key = self._key_
+        parameters = {
+            &#34;startPeriod&#34;: self._start_date_.strftime(&#34;%Y-%m-%d&#34;),
+            &#34;endPeriod&#34;: self._end_date_.strftime(&#34;%Y-%m-%d&#34;),
+        }
+        try:
+            response = requests.get(
+                url + key, params=parameters, headers={&#34;Accept&#34;: &#34;text/csv&#34;}
+            )
+            self.df = pd.read_csv(io.StringIO(response.text))
+        except pd.errors.EmptyDataError:
+            logger.error(
+                f&#34;Dataset &#39;{self.name}&#39; not loaded for period {self._start_date_} to {self._end_date_}&#34;
+            )
+        return response
+
+    def load_data(self):
+        data = Path(DATA_RAW, f&#34;{self.name}.csv&#34;)
+        if data.exists():
+            self.df = pd.read_csv(data)
+        else:
+            logger.error(
+                &#34;Data not found. Use read_data to initalize data load from ECB&#34;
+            )
+
+    def save_data(self):
+        self.df.to_csv(Path(DATA_RAW, f&#34;{self.name}.csv&#34;))
+
+
+class Interest(ECBData):
+    &#34;&#34;&#34;Read interest data from ECB Statistical Data Warehouse&#34;&#34;&#34;
+
+    def __init__(self):
+        super().__init__()
+        self.name = &#34;interest&#34;
+
+        DATAFLOW = &#34;MIR&#34;
+        FREQ = &#34;M&#34;
+        REF_AREA = &#34;NL&#34;
+        SECTOR = &#34;B&#34;
+        BALANCE_ITEM = &#34;A2CC&#34;
+        MATURITY = &#34;F+I+O+P&#34;
+        DATA_TYPE = &#34;R&#34;
+        AMOUNT_CAT = &#34;A&#34;
+        COUNTERPARTY_SECTOR = &#34;2250&#34;
+        CURRENCY = &#34;EUR&#34;
+        COVERAGE = &#34;N&#34;
+        self._key_ = (
+            f&#34;{DATAFLOW}/{FREQ}.{REF_AREA}.{SECTOR}.{BALANCE_ITEM}.&#34;
+            f&#34;{MATURITY}.{DATA_TYPE}.{AMOUNT_CAT}.&#34;
+            f&#34;{COUNTERPARTY_SECTOR}.{CURRENCY}.{COVERAGE}&#34;
+        )
+
+    def read_data(self):
+        logger.info(&#34;reading interest data from ESW.&#34;)
+        response = super().read_data()
+        df = self.df
+        if df.empty:
+            return response
+
+        df[&#34;fixed_period&#34;] = df[&#34;KEY&#34;].map(
+            {
+                &#34;MIR.M.NL.B.A2CC.F.R.A.2250.EUR.N&#34;: &#34;&lt;= 1 year&#34;,
+                &#34;MIR.M.NL.B.A2CC.I.R.A.2250.EUR.N&#34;: &#34;1&gt;5 years&#34;,
+                &#34;MIR.M.NL.B.A2CC.O.R.A.2250.EUR.N&#34;: &#34;5&gt;10 years&#34;,
+                &#34;MIR.M.NL.B.A2CC.P.R.A.2250.EUR.N&#34;: &#34;&gt;10 years&#34;,
+            }
+        )
+        df = df.filter([&#34;TIME_PERIOD&#34;, &#34;fixed_period&#34;, &#34;OBS_VALUE&#34;], axis=1)
+        df.columns = [&#34;period&#34;, &#34;fixed_period&#34;, &#34;interest&#34;]
+        df[&#34;period&#34;] = pd.to_datetime(df[&#34;period&#34;])
+        df = df.set_index(&#34;period&#34;)
+        df.sort_values([&#34;period&#34;, &#34;fixed_period&#34;], inplace=True)
+        self.df = df
+        return response
+
+    def lineplot(self):
+        visualize.lineplot(
+            self.df,
+            x=self.df.index,
+            y=&#34;interest&#34;,
+            x_label=&#34;Period&#34;,
+            y_label=&#34;Interest %&#34;,
+            hue=&#34;fixed_period&#34;,
+            title=&#34;Loans to households for house purchase with collateral (new business) - Netherlands&#34;,
+        )
+
+    def load_data(self):
+        super().load_data()
+        df = self.df
+        df.set_index(&#34;period&#34;, inplace=True)
+        df.sort_values([&#34;period&#34;, &#34;fixed_period&#34;], inplace=True)
+        self.df = df
+
+
+class Zerocurve(ECBData):
+    &#34;&#34;&#34;Read zero curve data from ECB Statistical Data Warehouse&#34;&#34;&#34;
+
+    def __init__(self):
+        super().__init__()
+        self.name = &#34;zerocurve&#34;
+        DATAFLOW = &#34;YC&#34;  # Yield Curve
+        FREQ = &#34;B&#34;  # Daily - buisiness days
+        REF_AREA = &#34;U2&#34;  # Euro area (changing composition)
+        CURRENCY = &#34;EUR&#34;  # currency
+        PROVIDER_FM = &#34;4F&#34;  # ECB
+        INSTRUMENT_FM = &#34;G_N_A&#34;  # Government bond, triple A
+        PROVIDER_FM_ID = &#34;SV_C_YM&#34;  # Svensson model,continuous compounding
+        DATA_TYPE_FM = (
+            &#34;IF_3M+IF_6M+IF_9M+IF_1Y+IF_1Y3M+IF_1Y6M+IF_2Y+IF_3Y+&#34;
+            &#34;IF_4Y+IF_5Y+IF_7Y+IF_10Y+IF_15Y+IF_30Y&#34;
+        )
+        self._key_ = (
+            f&#34;{DATAFLOW}/{FREQ}.{REF_AREA}.{CURRENCY}.{PROVIDER_FM}.&#34;
+            f&#34;{INSTRUMENT_FM}.{PROVIDER_FM_ID}.{DATA_TYPE_FM}&#34;
+        )
+        self.timestep = 0
+
+    def _offset_days_(self, row):
+        if row.unit == &#34;Months&#34;:
+            return row.rate_dt + DateOffset(months=row.number)
+        if row.unit in (&#34;Year&#34;, &#34;Years&#34;):
+            return row.rate_dt + DateOffset(years=row.number)
+
+    def read_data(self) -&gt; pd.DataFrame:
+        logger.info(&#34;reading zero curve data from ESW.&#34;)
+        response = super().read_data()
+        df = self.df
+        if df.empty:
+            return response
+        df.loc[:, &#34;KEY&#34;] = df.loc[:, &#34;KEY&#34;].str.slice(29)
+        df = df.loc[:, [&#34;TIME_PERIOD&#34;, &#34;KEY&#34;, &#34;OBS_VALUE&#34;]]
+        df.columns = [&#34;rate_dt&#34;, &#34;tenor&#34;, &#34;rate&#34;]
+        names = {
+            &#34;IF_3M&#34;: &#34;3 Months&#34;,
+            &#34;IF_6M&#34;: &#34;6 Months&#34;,
+            &#34;IF_9M&#34;: &#34;9 Months&#34;,
+            &#34;IF_1Y3M&#34;: &#34;15 Months&#34;,
+            &#34;IF_1Y6M&#34;: &#34;18 Months&#34;,
+            &#34;IF_1Y&#34;: &#34;1 Year&#34;,
+            &#34;IF_2Y&#34;: &#34;2 Years&#34;,
+            &#34;IF_3Y&#34;: &#34;3 Years&#34;,
+            &#34;IF_4Y&#34;: &#34;4 Years&#34;,
+            &#34;IF_5Y&#34;: &#34;5 Years&#34;,
+            &#34;IF_7Y&#34;: &#34;7 Years&#34;,
+            &#34;IF_10Y&#34;: &#34;10 Years&#34;,
+            &#34;IF_15Y&#34;: &#34;15 Years&#34;,
+            &#34;IF_30Y&#34;: &#34;30 Years&#34;,
+        }
+        df[&#34;tenor&#34;] = df[&#34;tenor&#34;].map(names)
+        df[[&#34;number&#34;, &#34;unit&#34;]] = df[&#34;tenor&#34;].str.split(&#34; &#34;, expand=True)
+        df[&#34;number&#34;] = df[&#34;number&#34;].astype(&#34;int&#34;)
+        df[&#34;unit&#34;] = df[&#34;unit&#34;].astype(&#34;str&#34;)
+        df[&#34;rate_dt&#34;] = pd.to_datetime(df[&#34;rate_dt&#34;])
+        df[&#34;value_dt&#34;] = df.apply(self._offset_days_, axis=1)
+        df.drop(columns=[&#34;number&#34;, &#34;unit&#34;], inplace=True)
+
+        # Add Overnight data point
+        df_on = df[[&#34;rate_dt&#34;]].drop_duplicates()
+        df_on[&#34;rate&#34;] = np.NaN
+        df_on[&#34;tenor&#34;] = &#34;ON&#34;
+        df_on[&#34;value_dt&#34;] = df_on[&#34;rate_dt&#34;] + BDay(1)
+        df = pd.concat([df.reset_index(), df_on])
+        df.drop(columns=[&#34;index&#34;], inplace=True)
+        df.set_index(&#34;rate_dt&#34;, inplace=True)
+        df.sort_values([&#34;rate_dt&#34;, &#34;value_dt&#34;], inplace=True)
+        df.bfill(inplace=True)
+
+        self.df = df
+        self.yield_data = self.df.pivot(columns=&#34;tenor&#34;, values=&#34;rate&#34;)
+        self._calculate_()
+
+        return response
+
+    def _calculate_(self):
+        &#34;&#34;&#34;Calculate statistics (mu and sigma) for simulating rates&#34;&#34;&#34;
+        rate_changes = np.log(1 + self.yield_data.pct_change()).dropna()
+        self.mu = rate_changes.mean().values
+        self.sigma = rate_changes.std().values
+
+    def interpolate(self, pos_date: datetime) -&gt; pd.DataFrame:
+        # In order to caculate the net present value at any timestep, we need to
+        # interpolate the zero curve to a forward curve for that specific position date
+        # To simplify matters we use linair interpolation
+        if pos_date not in self.df.index:
+            logger.error(&#34;Interpolation data {pos_date} not found in zero curve data.&#34;)
+        else:
+            df_date = self.df.loc[pos_date]
+            df_date = df_date.set_index(&#34;value_dt&#34;)
+            df_forward = df_date[[&#34;rate&#34;]].resample(&#34;D&#34;).mean()
+            df_forward[&#34;rate&#34;] = df_forward[&#34;rate&#34;].interpolate()
+            return df_forward
+
+    def lineplot(self):
+        if self.yield_data.empty:
+            return
+        df = pd.melt(self.yield_data.reset_index(), id_vars=&#34;rate_dt&#34;)
+        visualize.lineplot(
+            df,
+            x=&#34;rate_dt&#34;,
+            y=&#34;value&#34;,
+            hue=&#34;tenor&#34;,
+            title=&#34;Zero curve, yield curve, governement bond triple A Euro Area&#34;,
+        )
+
+    def step(self, dt=1 / 252):
+        # Move one step forward in time, generating simulated data for one day
+        yield_data = self.yield_data
+        mu = self.mu
+        sigma = self.sigma
+        r0 = yield_data[-1].values
+        r1 = np.exp(
+            predict.vasicek(np.log(r0), mu, sigma, dt)
+        )  # Exponentiate the predicted log return
+        next_day = yield_data.index(-1) + BDay(1)
+        self.yield_data.loc[next_day] = r1
+        self.timestep = self.timestep + 1
+
+    def reset(self):
+        # Reset the time to the origin
+        self.yield_data = self.df.pivot(columns=&#34;tenor&#34;, values=&#34;rate&#34;)
+
+
+class Inflation(ECBData):
+    &#34;&#34;&#34;Read inflation data from ECB Statistical Data Warehouse&#34;&#34;&#34;
+
+    def __init__(self):
+        super().__init__()
+        self.name = &#34;inflation&#34;
+        DATAFLOW = &#34;ICP&#34;
+        FREQ = &#34;M&#34;
+        REF_AREA = &#34;NL&#34;
+        ADJUSTMENT = &#34;N&#34;
+        CLASS = &#34;000000&#34;
+        PROVIDER = &#34;4&#34;  # ECB
+        VALIDATION = &#34;ANR&#34;
+        self._key_ = (
+            f&#34;{DATAFLOW}/{FREQ}.{REF_AREA}.&#34;
+            f&#34;{ADJUSTMENT}.{CLASS}.{PROVIDER}.{VALIDATION}&#34;
+        )
+
+    def read_data(self):
+        logger.info(&#34;reading inflation data from ESW.&#34;)
+        response = super().read_data()
+        df = self.df
+        if df.empty:
+            return response
+        df = self.df.filter([&#34;TIME_PERIOD&#34;, &#34;OBS_VALUE&#34;], axis=1)
+        df.columns = [&#34;period&#34;, &#34;inflation&#34;]
+        df[&#34;period&#34;] = pd.to_datetime(df[&#34;period&#34;])
+        df = df.set_index(&#34;period&#34;)
+        self.df = df
+        return response
+
+    def lineplot(self):
+        if self.df.empty:
+            return
+        visualize.lineplot(
+            self.df,
+            x=self.df.index,
+            y=&#34;inflation&#34;,
+            x_label=&#34;Period&#34;,
+            y_label=&#34;Inflation %&#34;,
+            title=&#34;HICP Annual rate of change Eurostat&#34;,
+        )</code></pre>
+</details>
+</section>
+<section>
+</section>
+<section>
+</section>
+<section>
+</section>
+<section>
+<h2 class="section-title" id="header-classes">Classes</h2>
+<dl>
+<dt id="src.data.dataset.ECBData"><code class="flex name class">
+<span>class <span class="ident">ECBData</span></span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">class ECBData:
+    def __init__(self):
+        self._url_ = &#34;https://sdw-wsrest.ecb.europa.eu/service/data/&#34;
+        self._start_date_ = parse(&#34;2003-01-01&#34;)
+        self._end_date_ = parse(&#34;2023-02-28&#34;)
+        self.df = pd.DataFrame()
+
+    def set_period(self, start_date: datetime, end_date: datetime):
+        self._start_date_ = start_date
+        self._end_date_ = end_date
+
+    def get_period(self) -&gt; tuple[datetime, datetime]:
+        return self._start_date_, self._end_date_
+
+    def read_data(self):
+        url = self._url_
+        key = self._key_
+        parameters = {
+            &#34;startPeriod&#34;: self._start_date_.strftime(&#34;%Y-%m-%d&#34;),
+            &#34;endPeriod&#34;: self._end_date_.strftime(&#34;%Y-%m-%d&#34;),
+        }
+        try:
+            response = requests.get(
+                url + key, params=parameters, headers={&#34;Accept&#34;: &#34;text/csv&#34;}
+            )
+            self.df = pd.read_csv(io.StringIO(response.text))
+        except pd.errors.EmptyDataError:
+            logger.error(
+                f&#34;Dataset &#39;{self.name}&#39; not loaded for period {self._start_date_} to {self._end_date_}&#34;
+            )
+        return response
+
+    def load_data(self):
+        data = Path(DATA_RAW, f&#34;{self.name}.csv&#34;)
+        if data.exists():
+            self.df = pd.read_csv(data)
+        else:
+            logger.error(
+                &#34;Data not found. Use read_data to initalize data load from ECB&#34;
+            )
+
+    def save_data(self):
+        self.df.to_csv(Path(DATA_RAW, f&#34;{self.name}.csv&#34;))</code></pre>
+</details>
+<h3>Subclasses</h3>
+<ul class="hlist">
+<li><a title="src.data.dataset.Inflation" href="#src.data.dataset.Inflation">Inflation</a></li>
+<li><a title="src.data.dataset.Interest" href="#src.data.dataset.Interest">Interest</a></li>
+<li><a title="src.data.dataset.Zerocurve" href="#src.data.dataset.Zerocurve">Zerocurve</a></li>
+</ul>
+<h3>Methods</h3>
+<dl>
+<dt id="src.data.dataset.ECBData.get_period"><code class="name flex">
+<span>def <span class="ident">get_period</span></span>(<span>self) ‑> tuple[datetime.datetime, datetime.datetime]</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def get_period(self) -&gt; tuple[datetime, datetime]:
+    return self._start_date_, self._end_date_</code></pre>
+</details>
+</dd>
+<dt id="src.data.dataset.ECBData.load_data"><code class="name flex">
+<span>def <span class="ident">load_data</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def load_data(self):
+    data = Path(DATA_RAW, f&#34;{self.name}.csv&#34;)
+    if data.exists():
+        self.df = pd.read_csv(data)
+    else:
+        logger.error(
+            &#34;Data not found. Use read_data to initalize data load from ECB&#34;
+        )</code></pre>
+</details>
+</dd>
+<dt id="src.data.dataset.ECBData.read_data"><code class="name flex">
+<span>def <span class="ident">read_data</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def read_data(self):
+    url = self._url_
+    key = self._key_
+    parameters = {
+        &#34;startPeriod&#34;: self._start_date_.strftime(&#34;%Y-%m-%d&#34;),
+        &#34;endPeriod&#34;: self._end_date_.strftime(&#34;%Y-%m-%d&#34;),
+    }
+    try:
+        response = requests.get(
+            url + key, params=parameters, headers={&#34;Accept&#34;: &#34;text/csv&#34;}
+        )
+        self.df = pd.read_csv(io.StringIO(response.text))
+    except pd.errors.EmptyDataError:
+        logger.error(
+            f&#34;Dataset &#39;{self.name}&#39; not loaded for period {self._start_date_} to {self._end_date_}&#34;
+        )
+    return response</code></pre>
+</details>
+</dd>
+<dt id="src.data.dataset.ECBData.save_data"><code class="name flex">
+<span>def <span class="ident">save_data</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def save_data(self):
+    self.df.to_csv(Path(DATA_RAW, f&#34;{self.name}.csv&#34;))</code></pre>
+</details>
+</dd>
+<dt id="src.data.dataset.ECBData.set_period"><code class="name flex">
+<span>def <span class="ident">set_period</span></span>(<span>self, start_date: datetime.datetime, end_date: datetime.datetime)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def set_period(self, start_date: datetime, end_date: datetime):
+    self._start_date_ = start_date
+    self._end_date_ = end_date</code></pre>
+</details>
+</dd>
+</dl>
+</dd>
+<dt id="src.data.dataset.Inflation"><code class="flex name class">
+<span>class <span class="ident">Inflation</span></span>
+</code></dt>
+<dd>
+<div class="desc"><p>Read inflation data from ECB Statistical Data Warehouse</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">class Inflation(ECBData):
+    &#34;&#34;&#34;Read inflation data from ECB Statistical Data Warehouse&#34;&#34;&#34;
+
+    def __init__(self):
+        super().__init__()
+        self.name = &#34;inflation&#34;
+        DATAFLOW = &#34;ICP&#34;
+        FREQ = &#34;M&#34;
+        REF_AREA = &#34;NL&#34;
+        ADJUSTMENT = &#34;N&#34;
+        CLASS = &#34;000000&#34;
+        PROVIDER = &#34;4&#34;  # ECB
+        VALIDATION = &#34;ANR&#34;
+        self._key_ = (
+            f&#34;{DATAFLOW}/{FREQ}.{REF_AREA}.&#34;
+            f&#34;{ADJUSTMENT}.{CLASS}.{PROVIDER}.{VALIDATION}&#34;
+        )
+
+    def read_data(self):
+        logger.info(&#34;reading inflation data from ESW.&#34;)
+        response = super().read_data()
+        df = self.df
+        if df.empty:
+            return response
+        df = self.df.filter([&#34;TIME_PERIOD&#34;, &#34;OBS_VALUE&#34;], axis=1)
+        df.columns = [&#34;period&#34;, &#34;inflation&#34;]
+        df[&#34;period&#34;] = pd.to_datetime(df[&#34;period&#34;])
+        df = df.set_index(&#34;period&#34;)
+        self.df = df
+        return response
+
+    def lineplot(self):
+        if self.df.empty:
+            return
+        visualize.lineplot(
+            self.df,
+            x=self.df.index,
+            y=&#34;inflation&#34;,
+            x_label=&#34;Period&#34;,
+            y_label=&#34;Inflation %&#34;,
+            title=&#34;HICP Annual rate of change Eurostat&#34;,
+        )</code></pre>
+</details>
+<h3>Ancestors</h3>
+<ul class="hlist">
+<li><a title="src.data.dataset.ECBData" href="#src.data.dataset.ECBData">ECBData</a></li>
+</ul>
+<h3>Methods</h3>
+<dl>
+<dt id="src.data.dataset.Inflation.lineplot"><code class="name flex">
+<span>def <span class="ident">lineplot</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def lineplot(self):
+    if self.df.empty:
+        return
+    visualize.lineplot(
+        self.df,
+        x=self.df.index,
+        y=&#34;inflation&#34;,
+        x_label=&#34;Period&#34;,
+        y_label=&#34;Inflation %&#34;,
+        title=&#34;HICP Annual rate of change Eurostat&#34;,
+    )</code></pre>
+</details>
+</dd>
+<dt id="src.data.dataset.Inflation.read_data"><code class="name flex">
+<span>def <span class="ident">read_data</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def read_data(self):
+    logger.info(&#34;reading inflation data from ESW.&#34;)
+    response = super().read_data()
+    df = self.df
+    if df.empty:
+        return response
+    df = self.df.filter([&#34;TIME_PERIOD&#34;, &#34;OBS_VALUE&#34;], axis=1)
+    df.columns = [&#34;period&#34;, &#34;inflation&#34;]
+    df[&#34;period&#34;] = pd.to_datetime(df[&#34;period&#34;])
+    df = df.set_index(&#34;period&#34;)
+    self.df = df
+    return response</code></pre>
+</details>
+</dd>
+</dl>
+</dd>
+<dt id="src.data.dataset.Interest"><code class="flex name class">
+<span>class <span class="ident">Interest</span></span>
+</code></dt>
+<dd>
+<div class="desc"><p>Read interest data from ECB Statistical Data Warehouse</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">class Interest(ECBData):
+    &#34;&#34;&#34;Read interest data from ECB Statistical Data Warehouse&#34;&#34;&#34;
+
+    def __init__(self):
+        super().__init__()
+        self.name = &#34;interest&#34;
+
+        DATAFLOW = &#34;MIR&#34;
+        FREQ = &#34;M&#34;
+        REF_AREA = &#34;NL&#34;
+        SECTOR = &#34;B&#34;
+        BALANCE_ITEM = &#34;A2CC&#34;
+        MATURITY = &#34;F+I+O+P&#34;
+        DATA_TYPE = &#34;R&#34;
+        AMOUNT_CAT = &#34;A&#34;
+        COUNTERPARTY_SECTOR = &#34;2250&#34;
+        CURRENCY = &#34;EUR&#34;
+        COVERAGE = &#34;N&#34;
+        self._key_ = (
+            f&#34;{DATAFLOW}/{FREQ}.{REF_AREA}.{SECTOR}.{BALANCE_ITEM}.&#34;
+            f&#34;{MATURITY}.{DATA_TYPE}.{AMOUNT_CAT}.&#34;
+            f&#34;{COUNTERPARTY_SECTOR}.{CURRENCY}.{COVERAGE}&#34;
+        )
+
+    def read_data(self):
+        logger.info(&#34;reading interest data from ESW.&#34;)
+        response = super().read_data()
+        df = self.df
+        if df.empty:
+            return response
+
+        df[&#34;fixed_period&#34;] = df[&#34;KEY&#34;].map(
+            {
+                &#34;MIR.M.NL.B.A2CC.F.R.A.2250.EUR.N&#34;: &#34;&lt;= 1 year&#34;,
+                &#34;MIR.M.NL.B.A2CC.I.R.A.2250.EUR.N&#34;: &#34;1&gt;5 years&#34;,
+                &#34;MIR.M.NL.B.A2CC.O.R.A.2250.EUR.N&#34;: &#34;5&gt;10 years&#34;,
+                &#34;MIR.M.NL.B.A2CC.P.R.A.2250.EUR.N&#34;: &#34;&gt;10 years&#34;,
+            }
+        )
+        df = df.filter([&#34;TIME_PERIOD&#34;, &#34;fixed_period&#34;, &#34;OBS_VALUE&#34;], axis=1)
+        df.columns = [&#34;period&#34;, &#34;fixed_period&#34;, &#34;interest&#34;]
+        df[&#34;period&#34;] = pd.to_datetime(df[&#34;period&#34;])
+        df = df.set_index(&#34;period&#34;)
+        df.sort_values([&#34;period&#34;, &#34;fixed_period&#34;], inplace=True)
+        self.df = df
+        return response
+
+    def lineplot(self):
+        visualize.lineplot(
+            self.df,
+            x=self.df.index,
+            y=&#34;interest&#34;,
+            x_label=&#34;Period&#34;,
+            y_label=&#34;Interest %&#34;,
+            hue=&#34;fixed_period&#34;,
+            title=&#34;Loans to households for house purchase with collateral (new business) - Netherlands&#34;,
+        )
+
+    def load_data(self):
+        super().load_data()
+        df = self.df
+        df.set_index(&#34;period&#34;, inplace=True)
+        df.sort_values([&#34;period&#34;, &#34;fixed_period&#34;], inplace=True)
+        self.df = df</code></pre>
+</details>
+<h3>Ancestors</h3>
+<ul class="hlist">
+<li><a title="src.data.dataset.ECBData" href="#src.data.dataset.ECBData">ECBData</a></li>
+</ul>
+<h3>Methods</h3>
+<dl>
+<dt id="src.data.dataset.Interest.lineplot"><code class="name flex">
+<span>def <span class="ident">lineplot</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def lineplot(self):
+    visualize.lineplot(
+        self.df,
+        x=self.df.index,
+        y=&#34;interest&#34;,
+        x_label=&#34;Period&#34;,
+        y_label=&#34;Interest %&#34;,
+        hue=&#34;fixed_period&#34;,
+        title=&#34;Loans to households for house purchase with collateral (new business) - Netherlands&#34;,
+    )</code></pre>
+</details>
+</dd>
+<dt id="src.data.dataset.Interest.load_data"><code class="name flex">
+<span>def <span class="ident">load_data</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def load_data(self):
+    super().load_data()
+    df = self.df
+    df.set_index(&#34;period&#34;, inplace=True)
+    df.sort_values([&#34;period&#34;, &#34;fixed_period&#34;], inplace=True)
+    self.df = df</code></pre>
+</details>
+</dd>
+<dt id="src.data.dataset.Interest.read_data"><code class="name flex">
+<span>def <span class="ident">read_data</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def read_data(self):
+    logger.info(&#34;reading interest data from ESW.&#34;)
+    response = super().read_data()
+    df = self.df
+    if df.empty:
+        return response
+
+    df[&#34;fixed_period&#34;] = df[&#34;KEY&#34;].map(
+        {
+            &#34;MIR.M.NL.B.A2CC.F.R.A.2250.EUR.N&#34;: &#34;&lt;= 1 year&#34;,
+            &#34;MIR.M.NL.B.A2CC.I.R.A.2250.EUR.N&#34;: &#34;1&gt;5 years&#34;,
+            &#34;MIR.M.NL.B.A2CC.O.R.A.2250.EUR.N&#34;: &#34;5&gt;10 years&#34;,
+            &#34;MIR.M.NL.B.A2CC.P.R.A.2250.EUR.N&#34;: &#34;&gt;10 years&#34;,
+        }
+    )
+    df = df.filter([&#34;TIME_PERIOD&#34;, &#34;fixed_period&#34;, &#34;OBS_VALUE&#34;], axis=1)
+    df.columns = [&#34;period&#34;, &#34;fixed_period&#34;, &#34;interest&#34;]
+    df[&#34;period&#34;] = pd.to_datetime(df[&#34;period&#34;])
+    df = df.set_index(&#34;period&#34;)
+    df.sort_values([&#34;period&#34;, &#34;fixed_period&#34;], inplace=True)
+    self.df = df
+    return response</code></pre>
+</details>
+</dd>
+</dl>
+</dd>
+<dt id="src.data.dataset.Zerocurve"><code class="flex name class">
+<span>class <span class="ident">Zerocurve</span></span>
+</code></dt>
+<dd>
+<div class="desc"><p>Read zero curve data from ECB Statistical Data Warehouse</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">class Zerocurve(ECBData):
+    &#34;&#34;&#34;Read zero curve data from ECB Statistical Data Warehouse&#34;&#34;&#34;
+
+    def __init__(self):
+        super().__init__()
+        self.name = &#34;zerocurve&#34;
+        DATAFLOW = &#34;YC&#34;  # Yield Curve
+        FREQ = &#34;B&#34;  # Daily - buisiness days
+        REF_AREA = &#34;U2&#34;  # Euro area (changing composition)
+        CURRENCY = &#34;EUR&#34;  # currency
+        PROVIDER_FM = &#34;4F&#34;  # ECB
+        INSTRUMENT_FM = &#34;G_N_A&#34;  # Government bond, triple A
+        PROVIDER_FM_ID = &#34;SV_C_YM&#34;  # Svensson model,continuous compounding
+        DATA_TYPE_FM = (
+            &#34;IF_3M+IF_6M+IF_9M+IF_1Y+IF_1Y3M+IF_1Y6M+IF_2Y+IF_3Y+&#34;
+            &#34;IF_4Y+IF_5Y+IF_7Y+IF_10Y+IF_15Y+IF_30Y&#34;
+        )
+        self._key_ = (
+            f&#34;{DATAFLOW}/{FREQ}.{REF_AREA}.{CURRENCY}.{PROVIDER_FM}.&#34;
+            f&#34;{INSTRUMENT_FM}.{PROVIDER_FM_ID}.{DATA_TYPE_FM}&#34;
+        )
+        self.timestep = 0
+
+    def _offset_days_(self, row):
+        if row.unit == &#34;Months&#34;:
+            return row.rate_dt + DateOffset(months=row.number)
+        if row.unit in (&#34;Year&#34;, &#34;Years&#34;):
+            return row.rate_dt + DateOffset(years=row.number)
+
+    def read_data(self) -&gt; pd.DataFrame:
+        logger.info(&#34;reading zero curve data from ESW.&#34;)
+        response = super().read_data()
+        df = self.df
+        if df.empty:
+            return response
+        df.loc[:, &#34;KEY&#34;] = df.loc[:, &#34;KEY&#34;].str.slice(29)
+        df = df.loc[:, [&#34;TIME_PERIOD&#34;, &#34;KEY&#34;, &#34;OBS_VALUE&#34;]]
+        df.columns = [&#34;rate_dt&#34;, &#34;tenor&#34;, &#34;rate&#34;]
+        names = {
+            &#34;IF_3M&#34;: &#34;3 Months&#34;,
+            &#34;IF_6M&#34;: &#34;6 Months&#34;,
+            &#34;IF_9M&#34;: &#34;9 Months&#34;,
+            &#34;IF_1Y3M&#34;: &#34;15 Months&#34;,
+            &#34;IF_1Y6M&#34;: &#34;18 Months&#34;,
+            &#34;IF_1Y&#34;: &#34;1 Year&#34;,
+            &#34;IF_2Y&#34;: &#34;2 Years&#34;,
+            &#34;IF_3Y&#34;: &#34;3 Years&#34;,
+            &#34;IF_4Y&#34;: &#34;4 Years&#34;,
+            &#34;IF_5Y&#34;: &#34;5 Years&#34;,
+            &#34;IF_7Y&#34;: &#34;7 Years&#34;,
+            &#34;IF_10Y&#34;: &#34;10 Years&#34;,
+            &#34;IF_15Y&#34;: &#34;15 Years&#34;,
+            &#34;IF_30Y&#34;: &#34;30 Years&#34;,
+        }
+        df[&#34;tenor&#34;] = df[&#34;tenor&#34;].map(names)
+        df[[&#34;number&#34;, &#34;unit&#34;]] = df[&#34;tenor&#34;].str.split(&#34; &#34;, expand=True)
+        df[&#34;number&#34;] = df[&#34;number&#34;].astype(&#34;int&#34;)
+        df[&#34;unit&#34;] = df[&#34;unit&#34;].astype(&#34;str&#34;)
+        df[&#34;rate_dt&#34;] = pd.to_datetime(df[&#34;rate_dt&#34;])
+        df[&#34;value_dt&#34;] = df.apply(self._offset_days_, axis=1)
+        df.drop(columns=[&#34;number&#34;, &#34;unit&#34;], inplace=True)
+
+        # Add Overnight data point
+        df_on = df[[&#34;rate_dt&#34;]].drop_duplicates()
+        df_on[&#34;rate&#34;] = np.NaN
+        df_on[&#34;tenor&#34;] = &#34;ON&#34;
+        df_on[&#34;value_dt&#34;] = df_on[&#34;rate_dt&#34;] + BDay(1)
+        df = pd.concat([df.reset_index(), df_on])
+        df.drop(columns=[&#34;index&#34;], inplace=True)
+        df.set_index(&#34;rate_dt&#34;, inplace=True)
+        df.sort_values([&#34;rate_dt&#34;, &#34;value_dt&#34;], inplace=True)
+        df.bfill(inplace=True)
+
+        self.df = df
+        self.yield_data = self.df.pivot(columns=&#34;tenor&#34;, values=&#34;rate&#34;)
+        self._calculate_()
+
+        return response
+
+    def _calculate_(self):
+        &#34;&#34;&#34;Calculate statistics (mu and sigma) for simulating rates&#34;&#34;&#34;
+        rate_changes = np.log(1 + self.yield_data.pct_change()).dropna()
+        self.mu = rate_changes.mean().values
+        self.sigma = rate_changes.std().values
+
+    def interpolate(self, pos_date: datetime) -&gt; pd.DataFrame:
+        # In order to caculate the net present value at any timestep, we need to
+        # interpolate the zero curve to a forward curve for that specific position date
+        # To simplify matters we use linair interpolation
+        if pos_date not in self.df.index:
+            logger.error(&#34;Interpolation data {pos_date} not found in zero curve data.&#34;)
+        else:
+            df_date = self.df.loc[pos_date]
+            df_date = df_date.set_index(&#34;value_dt&#34;)
+            df_forward = df_date[[&#34;rate&#34;]].resample(&#34;D&#34;).mean()
+            df_forward[&#34;rate&#34;] = df_forward[&#34;rate&#34;].interpolate()
+            return df_forward
+
+    def lineplot(self):
+        if self.yield_data.empty:
+            return
+        df = pd.melt(self.yield_data.reset_index(), id_vars=&#34;rate_dt&#34;)
+        visualize.lineplot(
+            df,
+            x=&#34;rate_dt&#34;,
+            y=&#34;value&#34;,
+            hue=&#34;tenor&#34;,
+            title=&#34;Zero curve, yield curve, governement bond triple A Euro Area&#34;,
+        )
+
+    def step(self, dt=1 / 252):
+        # Move one step forward in time, generating simulated data for one day
+        yield_data = self.yield_data
+        mu = self.mu
+        sigma = self.sigma
+        r0 = yield_data[-1].values
+        r1 = np.exp(
+            predict.vasicek(np.log(r0), mu, sigma, dt)
+        )  # Exponentiate the predicted log return
+        next_day = yield_data.index(-1) + BDay(1)
+        self.yield_data.loc[next_day] = r1
+        self.timestep = self.timestep + 1
+
+    def reset(self):
+        # Reset the time to the origin
+        self.yield_data = self.df.pivot(columns=&#34;tenor&#34;, values=&#34;rate&#34;)</code></pre>
+</details>
+<h3>Ancestors</h3>
+<ul class="hlist">
+<li><a title="src.data.dataset.ECBData" href="#src.data.dataset.ECBData">ECBData</a></li>
+</ul>
+<h3>Methods</h3>
+<dl>
+<dt id="src.data.dataset.Zerocurve.interpolate"><code class="name flex">
+<span>def <span class="ident">interpolate</span></span>(<span>self, pos_date: datetime.datetime) ‑> pandas.core.frame.DataFrame</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def interpolate(self, pos_date: datetime) -&gt; pd.DataFrame:
+    # In order to caculate the net present value at any timestep, we need to
+    # interpolate the zero curve to a forward curve for that specific position date
+    # To simplify matters we use linair interpolation
+    if pos_date not in self.df.index:
+        logger.error(&#34;Interpolation data {pos_date} not found in zero curve data.&#34;)
+    else:
+        df_date = self.df.loc[pos_date]
+        df_date = df_date.set_index(&#34;value_dt&#34;)
+        df_forward = df_date[[&#34;rate&#34;]].resample(&#34;D&#34;).mean()
+        df_forward[&#34;rate&#34;] = df_forward[&#34;rate&#34;].interpolate()
+        return df_forward</code></pre>
+</details>
+</dd>
+<dt id="src.data.dataset.Zerocurve.lineplot"><code class="name flex">
+<span>def <span class="ident">lineplot</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def lineplot(self):
+    if self.yield_data.empty:
+        return
+    df = pd.melt(self.yield_data.reset_index(), id_vars=&#34;rate_dt&#34;)
+    visualize.lineplot(
+        df,
+        x=&#34;rate_dt&#34;,
+        y=&#34;value&#34;,
+        hue=&#34;tenor&#34;,
+        title=&#34;Zero curve, yield curve, governement bond triple A Euro Area&#34;,
+    )</code></pre>
+</details>
+</dd>
+<dt id="src.data.dataset.Zerocurve.read_data"><code class="name flex">
+<span>def <span class="ident">read_data</span></span>(<span>self) ‑> pandas.core.frame.DataFrame</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def read_data(self) -&gt; pd.DataFrame:
+    logger.info(&#34;reading zero curve data from ESW.&#34;)
+    response = super().read_data()
+    df = self.df
+    if df.empty:
+        return response
+    df.loc[:, &#34;KEY&#34;] = df.loc[:, &#34;KEY&#34;].str.slice(29)
+    df = df.loc[:, [&#34;TIME_PERIOD&#34;, &#34;KEY&#34;, &#34;OBS_VALUE&#34;]]
+    df.columns = [&#34;rate_dt&#34;, &#34;tenor&#34;, &#34;rate&#34;]
+    names = {
+        &#34;IF_3M&#34;: &#34;3 Months&#34;,
+        &#34;IF_6M&#34;: &#34;6 Months&#34;,
+        &#34;IF_9M&#34;: &#34;9 Months&#34;,
+        &#34;IF_1Y3M&#34;: &#34;15 Months&#34;,
+        &#34;IF_1Y6M&#34;: &#34;18 Months&#34;,
+        &#34;IF_1Y&#34;: &#34;1 Year&#34;,
+        &#34;IF_2Y&#34;: &#34;2 Years&#34;,
+        &#34;IF_3Y&#34;: &#34;3 Years&#34;,
+        &#34;IF_4Y&#34;: &#34;4 Years&#34;,
+        &#34;IF_5Y&#34;: &#34;5 Years&#34;,
+        &#34;IF_7Y&#34;: &#34;7 Years&#34;,
+        &#34;IF_10Y&#34;: &#34;10 Years&#34;,
+        &#34;IF_15Y&#34;: &#34;15 Years&#34;,
+        &#34;IF_30Y&#34;: &#34;30 Years&#34;,
+    }
+    df[&#34;tenor&#34;] = df[&#34;tenor&#34;].map(names)
+    df[[&#34;number&#34;, &#34;unit&#34;]] = df[&#34;tenor&#34;].str.split(&#34; &#34;, expand=True)
+    df[&#34;number&#34;] = df[&#34;number&#34;].astype(&#34;int&#34;)
+    df[&#34;unit&#34;] = df[&#34;unit&#34;].astype(&#34;str&#34;)
+    df[&#34;rate_dt&#34;] = pd.to_datetime(df[&#34;rate_dt&#34;])
+    df[&#34;value_dt&#34;] = df.apply(self._offset_days_, axis=1)
+    df.drop(columns=[&#34;number&#34;, &#34;unit&#34;], inplace=True)
+
+    # Add Overnight data point
+    df_on = df[[&#34;rate_dt&#34;]].drop_duplicates()
+    df_on[&#34;rate&#34;] = np.NaN
+    df_on[&#34;tenor&#34;] = &#34;ON&#34;
+    df_on[&#34;value_dt&#34;] = df_on[&#34;rate_dt&#34;] + BDay(1)
+    df = pd.concat([df.reset_index(), df_on])
+    df.drop(columns=[&#34;index&#34;], inplace=True)
+    df.set_index(&#34;rate_dt&#34;, inplace=True)
+    df.sort_values([&#34;rate_dt&#34;, &#34;value_dt&#34;], inplace=True)
+    df.bfill(inplace=True)
+
+    self.df = df
+    self.yield_data = self.df.pivot(columns=&#34;tenor&#34;, values=&#34;rate&#34;)
+    self._calculate_()
+
+    return response</code></pre>
+</details>
+</dd>
+<dt id="src.data.dataset.Zerocurve.reset"><code class="name flex">
+<span>def <span class="ident">reset</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def reset(self):
+    # Reset the time to the origin
+    self.yield_data = self.df.pivot(columns=&#34;tenor&#34;, values=&#34;rate&#34;)</code></pre>
+</details>
+</dd>
+<dt id="src.data.dataset.Zerocurve.step"><code class="name flex">
+<span>def <span class="ident">step</span></span>(<span>self, dt=0.003968253968253968)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def step(self, dt=1 / 252):
+    # Move one step forward in time, generating simulated data for one day
+    yield_data = self.yield_data
+    mu = self.mu
+    sigma = self.sigma
+    r0 = yield_data[-1].values
+    r1 = np.exp(
+        predict.vasicek(np.log(r0), mu, sigma, dt)
+    )  # Exponentiate the predicted log return
+    next_day = yield_data.index(-1) + BDay(1)
+    self.yield_data.loc[next_day] = r1
+    self.timestep = self.timestep + 1</code></pre>
+</details>
+</dd>
+</dl>
+</dd>
+</dl>
+</section>
+</article>
+<nav id="sidebar">
+<h1>Index</h1>
+<div class="toc">
+<ul></ul>
+</div>
+<ul id="index">
+<li><h3>Super-module</h3>
+<ul>
+<li><code><a title="src.data" href="index.html">src.data</a></code></li>
+</ul>
+</li>
+<li><h3><a href="#header-classes">Classes</a></h3>
+<ul>
+<li>
+<h4><code><a title="src.data.dataset.ECBData" href="#src.data.dataset.ECBData">ECBData</a></code></h4>
+<ul class="">
+<li><code><a title="src.data.dataset.ECBData.get_period" href="#src.data.dataset.ECBData.get_period">get_period</a></code></li>
+<li><code><a title="src.data.dataset.ECBData.load_data" href="#src.data.dataset.ECBData.load_data">load_data</a></code></li>
+<li><code><a title="src.data.dataset.ECBData.read_data" href="#src.data.dataset.ECBData.read_data">read_data</a></code></li>
+<li><code><a title="src.data.dataset.ECBData.save_data" href="#src.data.dataset.ECBData.save_data">save_data</a></code></li>
+<li><code><a title="src.data.dataset.ECBData.set_period" href="#src.data.dataset.ECBData.set_period">set_period</a></code></li>
+</ul>
+</li>
+<li>
+<h4><code><a title="src.data.dataset.Inflation" href="#src.data.dataset.Inflation">Inflation</a></code></h4>
+<ul class="">
+<li><code><a title="src.data.dataset.Inflation.lineplot" href="#src.data.dataset.Inflation.lineplot">lineplot</a></code></li>
+<li><code><a title="src.data.dataset.Inflation.read_data" href="#src.data.dataset.Inflation.read_data">read_data</a></code></li>
+</ul>
+</li>
+<li>
+<h4><code><a title="src.data.dataset.Interest" href="#src.data.dataset.Interest">Interest</a></code></h4>
+<ul class="">
+<li><code><a title="src.data.dataset.Interest.lineplot" href="#src.data.dataset.Interest.lineplot">lineplot</a></code></li>
+<li><code><a title="src.data.dataset.Interest.load_data" href="#src.data.dataset.Interest.load_data">load_data</a></code></li>
+<li><code><a title="src.data.dataset.Interest.read_data" href="#src.data.dataset.Interest.read_data">read_data</a></code></li>
+</ul>
+</li>
+<li>
+<h4><code><a title="src.data.dataset.Zerocurve" href="#src.data.dataset.Zerocurve">Zerocurve</a></code></h4>
+<ul class="">
+<li><code><a title="src.data.dataset.Zerocurve.interpolate" href="#src.data.dataset.Zerocurve.interpolate">interpolate</a></code></li>
+<li><code><a title="src.data.dataset.Zerocurve.lineplot" href="#src.data.dataset.Zerocurve.lineplot">lineplot</a></code></li>
+<li><code><a title="src.data.dataset.Zerocurve.read_data" href="#src.data.dataset.Zerocurve.read_data">read_data</a></code></li>
+<li><code><a title="src.data.dataset.Zerocurve.reset" href="#src.data.dataset.Zerocurve.reset">reset</a></code></li>
+<li><code><a title="src.data.dataset.Zerocurve.step" href="#src.data.dataset.Zerocurve.step">step</a></code></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</nav>
+</main>
+<footer id="footer">
+<p>Generated by <a href="https://pdoc3.github.io/pdoc" title="pdoc: Python API documentation generator"><cite>pdoc</cite> 0.10.0</a>.</p>
+</footer>
+</body>
+</html>
