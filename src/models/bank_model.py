@@ -203,7 +203,6 @@ class Bankmodel:
         # We need to seperate principal payments and interest payments
         pass
 
-
     def calculate_risk(
         self, zerocurve: Zerocurve, shock: int = 1, direction: str = "parallel"
     ):
@@ -227,6 +226,7 @@ class Bankmodel:
         df_forward = df_date[["shock", "rate"]].resample("D").mean()
         df_forward["shock"] = df_forward["shock"].interpolate()
         df_forward["rate"] = df_forward["rate"].interpolate()
+
         df = self.df_cashflows
         df_c = df[df["value_dt"] > self.pos_date]  # Only include future cashflows
         df_returns = df_c.merge(
@@ -247,7 +247,66 @@ class Bankmodel:
             df_returns["cashflow"] * df_returns["df_shock"], 2
         )
         return sum(df_returns["npv_shock"] - df_returns["npv"])
-        
+
+    def calculate_bpv(self, zerocurve: Zerocurve, shock: int = 1) -> pd.DataFrame:
+        """Calculate BPV profile, applying the shock to each tenor and calculate the impact"""
+        pos_date = self.pos_date
+        shock = 1 / 100
+        # Current zero curve
+        df_zerocurve_date = zerocurve.df.loc[pos_date]
+
+        # Bin cashflows per tenor
+        bins = [
+            pos_date + pd.offsets.DateOffset(months=item)
+            for item in zerocurve.df.loc[pos_date].tenor.to_list()
+        ]
+        if self.df_cashflows["value_dt"].max() > bins[-1]:
+            bins.append(max(self.df_cashflows["value_dt"].max()))
+        cats = zerocurve.df.loc[pos_date].tenor.to_list()[
+            1:
+        ]  # list(range(1, len(bins)))
+        df = self.df_cashflows
+        df["tenor"] = pd.cut(df["value_dt"], bins, labels=cats, right=False)
+        df = df[df["value_dt"] > pos_date]
+        df = df[["tenor", "cashflow"]].groupby("tenor").sum("cashflow")
+
+        # Cashflows to numpy
+        cashflow = df["cashflow"].to_numpy().reshape(-1, 1)
+        # add row for tenor = 0, cashflows at T0 are not included in the cashflow list
+        cashflow = np.r_[np.zeros((1, 1)), cashflow]
+        # Reshape tenor to year fraction
+        t = (df_zerocurve_date["tenor"] / 12).to_numpy().reshape(-1, 1)
+        # Zerocurve to numpy
+        rates = df_zerocurve_date["rate"].to_numpy()
+        # shock rates up and down per tenor point and add as seperate columns
+        shock_range = [-shock, shock]
+        shocks = np.zeros((len(rates), len(rates) * len(shock_range)))
+        for s in shock_range:
+            for i in range(len(rates)):
+                shocks[:, i + shock_range.index(s) * len(rates)] = rates
+                shocks[i, i + shock_range.index(s) * len(rates)] = rates[i] + s
+        # Reshape rates to concat with shocks
+        rates = rates.reshape(len(rates), 1)
+        # add shocks to rates
+        rates = np.concatenate((rates, shocks), axis=1)
+        # calculate discount factor for all rates (including shocked rates)
+        discount_factor = (1 / (1 + rates / 100)) ** t
+        # calculate the npv for all cashflows under all scenarios
+        npv = discount_factor * cashflow
+        # Keep only the most negative results from both shocks
+        positive = npv[:, 1 : len(rates) + 1]
+        negative = npv[:, len(rates) + 1 :]
+        result = np.sum(
+            np.round(np.minimum(positive, negative) - npv[:, 0].reshape(-1, 1), 0),
+            axis=0,
+        ).reshape(-1, 1)
+        # Add result to dataframe
+        df_result = pd.DataFrame(result)
+        df_result["tenor"] = df_zerocurve_date["tenor"].to_list()
+        df_result.set_index("tenor", inplace=True)
+        df_result.columns = ["dv01"]
+        return df_result
+
     def plot_contracts(self):
         """Simple stacked barplot of outstanding contracts"""
         df = self.df_mortgages
