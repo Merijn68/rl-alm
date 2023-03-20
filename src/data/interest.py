@@ -14,13 +14,13 @@ COUNTERPARTY_SECTOR = "2250"
 CURRENCY = "EUR"
 COVERAGE = "N"
 
+
 class Interest(dataset.ECBData):
     """Read interest data from ECB Statistical Data Warehouse"""
 
     def __init__(self):
         super().__init__()
         self.name = "interest"
-        
         self._key_ = (
             f"{DATAFLOW}/{FREQ}.{REF_AREA}.{SECTOR}.{BALANCE_ITEM}."
             f"{MATURITY}.{DATA_TYPE}.{AMOUNT_CAT}."
@@ -44,6 +44,7 @@ class Interest(dataset.ECBData):
         df = df.filter(["TIME_PERIOD", "fixed_period", "OBS_VALUE"], axis=1)
         df.columns = ["period", "fixed_period", "interest"]
         df["period"] = pd.to_datetime(df["period"])
+        df["fixed_period"] = df["fixed_period"].astype("string")
         df = df.set_index("period")
         df.sort_values(["period", "fixed_period"], inplace=True)
         self.df = df
