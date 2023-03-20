@@ -74,3 +74,41 @@ def barplot(
         ax.set_ylabel(y_label)
     plt.savefig(Path(figurepath, name + ".svg"), bbox_inches="tight")
     return ax
+
+
+def bpvplot(
+    bpv: pd.DataFrame,
+    limits: pd.DataFrame,
+    figsize: Tuple[int, int] = figsize,
+    name: str = "bpv_profile",
+    title: str = "",
+    figurepath: Path = Path("../reports/figures"),
+) -> plt.Axes:
+    plt.figure(figsize=figsize)
+
+    df = pd.concat([limits.set_index("tenor"), bpv], axis=1).reset_index()
+    df = df[df["tenor"] > 0]
+    ax = plt.subplots()
+    ax = sns.barplot(x=df["tenor"], y=df["dv01"])
+    ax = sns.barplot(
+        x=df["tenor"],
+        y=df["upper_limit"],
+        alpha=0.2,
+        width=1,
+        linewidth=0,
+        color="steelblue",
+    )
+    ax = sns.barplot(
+        x=df["tenor"],
+        y=df["lower_limit"],
+        alpha=0.2,
+        width=1,
+        linewidth=0,
+        color="steelblue",
+    )
+    ax.set_title(title)
+    ax.set(xlabel="tenor", ylabel="BPV profile")
+    ax.grid(False)
+
+    plt.savefig(Path(figurepath, name + ".svg"), bbox_inches="tight")
+    return ax

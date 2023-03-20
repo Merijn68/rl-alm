@@ -22,6 +22,7 @@ class Bankmodel:
     def __init__(self, pos_date: datetime):
         self.df_cashflows = pd.DataFrame()
         self.df_mortgages = pd.DataFrame()
+        self.df_swaps = pd.DataFrame()
         self.pos_date = pos_date
         self.origin_pos_date = pos_date
 
@@ -125,6 +126,36 @@ class Bankmodel:
         logger.info(f"Added {len(df_cashflows)} cashflows to our model.")
 
         return df
+    
+    def generate_swap_contract(
+        self, buysell: str, tenor: int, zerocurve: Zerocurve, amount: float = 100000
+    ):
+        buysell = buysell.lower()        
+        contract_no = len(self.df_swaps) + 1
+        start_date = self.pos_date + BDay(2)        
+        if buysell == 'buy':
+            pay = 'fixed'
+            pay_freq = 'annual'
+            rec = 'float'
+            rec_freq = 'semi annual'
+        else:
+            pay = 'float'
+            pay_freq = 'semi annual'
+            rec = 'fixed'
+            rec_freq = 'annual'
+        swap = pd.DataFrame( 
+            [{ 
+                'contract': contract_no,
+                'pay': pay,
+                'start_date': start_date,
+                'pay_freq': pay_freq,
+                'rec': rec,
+                'rec_freq': rec_freq,
+                'principal': amount,                        
+                'tenor': tenor
+            }]
+        )
+        self.df_swaps = pd.concat([self.df_swaps, swap])
 
     def generate_nonmaturing_deposits(
         self, principal: float = 1000000, core: float = 0.4, maturity: int = 54
@@ -279,7 +310,7 @@ class Bankmodel:
         # Zerocurve to numpy
         rates = df_zerocurve_date["rate"].to_numpy()
         # shock rates up and down per tenor point and add as seperate columns
-        shock_range = [-shock, shock]
+        shock_range = [shock]
         shocks = np.zeros((len(rates), len(rates) * len(shock_range)))
         for s in shock_range:
             for i in range(len(rates)):
@@ -293,13 +324,14 @@ class Bankmodel:
         discount_factor = (1 / (1 + rates / 100)) ** t
         # calculate the npv for all cashflows under all scenarios
         npv = discount_factor * cashflow
-        # Keep only the most negative results from both shocks
         positive = npv[:, 1 : len(rates) + 1]
-        negative = npv[:, len(rates) + 1 :]
+        # negative = npv[:, len(rates) + 1 :]
         result = np.sum(
-            np.round(np.minimum(positive, negative) - npv[:, 0].reshape(-1, 1), 0),
+            np.round(positive - npv[:, 0].reshape(-1, 1), 0),
             axis=0,
-        ).reshape(-1, 1)
+        ).reshape(
+            -1, 1
+        )  # np.minimum(positive, negative)
         # Add result to dataframe
         df_result = pd.DataFrame(result)
         df_result["tenor"] = df_zerocurve_date["tenor"].to_list()
@@ -323,7 +355,7 @@ class Bankmodel:
                 .plot(kind="bar", stacked=True)
             )
         else:
-            return
+            return        
 
     def plot_cashflows(self):
         """Simple plot of outstanding cashflows from position date"""
@@ -343,7 +375,7 @@ class Bankmodel:
         # using format string '{:.0f}' here but you can choose others
         ax.set_yticks(ax.get_yticks())
         ax.set_yticklabels(["{:0.0f}".format(x) for x in ax.get_yticks().tolist()])
-
+   
     def step(self):
         self.pos_date = self.pos_date + BDay(1)
         self.step_nmd()
