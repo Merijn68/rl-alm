@@ -69,7 +69,7 @@ class Zerocurve(dataset.ECBData):
         df.sort_values(["rate_dt", "value_dt"], inplace=True)
         df.bfill(inplace=True)
         self.df = df
-        self.origin = self.df.copy()  # keeping to many copies of this.. Refactor
+        self.origin = self.df.copy()  # keeping to many copies of this.. Refactor code
         self.reset()
         return response
 
@@ -93,7 +93,7 @@ class Zerocurve(dataset.ECBData):
         visualize.lineplot(
             self.df,
             x="rate_dt",
-            y="value",
+            y="rate",
             hue="tenor",
             title="Zero curve, yield curve, governement bond triple A Euro Area",
         )
@@ -111,19 +111,20 @@ class Zerocurve(dataset.ECBData):
 
     def step(self, dt=1 / 252):
         # Move one step forward in time, generating simulated data for one day
-        # To slow. Need to do this without all the transforms
+        # using historic data to sample the yield curve movement.
+        # Even though this is very simple - the resulting zero curve is not very realistic
+        # We can use multiple scenarios - Crisis / No crisis to take samples from different time periods...
         yield_data = self.yield_data
-        mu = self.mu
-        sigma = self.sigma
-        r0 = yield_data.iloc[-1].values
-        r1 = np.exp(
-            predict.vasicek(np.log(r0), mu, sigma, dt)
-        )  # Exponentiate the predicted log return
+        yield_data_change = (yield_data - yield_data.shift()).dropna()
+        # yield_data_change = yield_data_change[yield_data_change.index <= '1-jan-2020'] # pre-crisis
+        r1 = yield_data.iloc[-1] + yield_data_change.sample(
+            1, replace=True
+        )  # No random state is given - to ensure that each step is random
         last_day = yield_data.index[-1]
         next_day = last_day + BDay(1)
         logger.debug(f"Stepping in zerocurve {next_day}.")
-        yield_data.loc[next_day] = r1
-        # update zerocurve dataframe - refactor this
+        yield_data.loc[next_day] = r1.values[0]
+        # update zerocurve dataframe - still need to refactor this...
         yd = yield_data.iloc[-1].reset_index()
         yd.columns = ["tenor", "rate"]
         yd["rate_dt"] = next_day
