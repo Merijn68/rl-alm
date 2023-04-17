@@ -69,7 +69,7 @@ class Zerocurve(dataset.ECBData):
         df.sort_values(["rate_dt", "value_dt"], inplace=True)
         df.bfill(inplace=True)
         self.df = df
-        self.origin = self.df.copy()  # keeping to many copies of this.. Refactor code
+        self.origin = self.df.copy()
         self.reset()
         return response
 
@@ -112,8 +112,6 @@ class Zerocurve(dataset.ECBData):
     def step(self, dt=1 / 252):
         # Move one step forward in time, generating simulated data for one day
         # using historic data to sample the yield curve movement.
-        # Even though this is very simple - the resulting zero curve is not very realistic
-        # We can use multiple scenarios - Crisis / No crisis to take samples from different time periods...
         yield_data = self.yield_data
         yield_data_change = (yield_data - yield_data.shift()).dropna()
         # yield_data_change = yield_data_change[yield_data_change.index <= '1-jan-2020'] # pre-crisis
@@ -138,6 +136,7 @@ class Zerocurve(dataset.ECBData):
         self.yield_data = self.df.pivot(columns="tenor", values="rate")
         yield_data = self.df.pivot(columns="tenor", values="rate")
         df_rate_changes = yield_data.pct_change().dropna()
+        df_rate_changes = df_rate_changes.clip(lower=0)  # handle negative values
         df_log_rate_changes = np.log1p(df_rate_changes)
         self.mu = df_log_rate_changes.mean().values
         self.sigma = df_log_rate_changes.std().values

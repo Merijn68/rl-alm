@@ -6,6 +6,7 @@ from datetime import datetime
 from src.data.interest import Interest
 from src.data.zerocurve import Zerocurve
 from src.models.bank_model import Bankmodel
+import pandas as pd
 
 
 def test_bankmodel_generate_morgage_contracts():
@@ -23,6 +24,8 @@ def test_bankmodel_generate_morgage_contracts():
 
 def main():
 
+    pd.options.display.float_format = "{:.2f}".format
+
     interest = Interest()
     interest.read_data()
     zerocurve = Zerocurve()
@@ -30,25 +33,22 @@ def main():
     pos_date = zerocurve.df.index[-1] - BDay(2)
     print(f"pos_date = {pos_date}")
     bankmodel = Bankmodel(pos_date)
-
-    # bankmodel.generate_mortgage_contracts(n=100, df_i=interest.df, amount=100000)
-    # bankmodel.generate_nonmaturing_deposits(principal=9000000, core=0.4, maturity=54)
-    # rate = zerocurve.df.loc[pos_date].query("tenor == 120")["rate"][0]
-    # bankmodel.generate_funding(principal=1000000, rate=rate, maturity=120)
-    result = bankmodel.calculate_npv(zerocurve)
+    result = bankmodel.calculate_npv(
+        zerocurve, bankmodel.df_cashflows, bankmodel.pos_date
+    )
     print("npv = ", result)
+    bankmodel.generate_swap_contract("sell", 24, zerocurve, amount=250000000)
+    result = bankmodel.calculate_npv(
+        zerocurve, bankmodel.df_cashflows, bankmodel.pos_date
+    )
 
-    bankmodel.generate_swap_contract("buy", 360, zerocurve, amount=50000000)
-    bankmodel.generate_swap_contract("sell", 120, zerocurve, amount=50000000)
-
-    # bankmodel.fixing_interest_rate_swaps(zerocurve)
-    # for i in range(0, 10):
-    #    zerocurve.step()
-    #    bankmodel.step()
     bpv = bankmodel.calculate_bpv(zerocurve)
     print("bpv = ", bpv)
-    npv = bankmodel.calculate_npv(zerocurve)
-    print("npv = ", npv)
+    result = bankmodel.calculate_npv(
+        zerocurve, bankmodel.df_cashflows, bankmodel.pos_date
+    )
+    result.to_excel("npv.xlsx")
+    print("npv = ", sum(result["npv"]))
 
 
 if __name__ == "__main__":
