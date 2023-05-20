@@ -28,9 +28,9 @@ def test_zero_set_period():
 def main():
     zerocurve = Zerocurve()
     zerocurve.read_data()
-    zerocurve.step()
-    print(zerocurve.df.head())
-    print(zerocurve.yield_data.head())
+    zerocurve.step(10)
+    print(zerocurve.df.tail())
+    print(zerocurve.yield_data.tail())
 
 
 if __name__ == "__main__":

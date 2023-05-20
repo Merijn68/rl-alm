@@ -12,7 +12,7 @@ class ECBData:
     def __init__(self):
         self._url_ = "https://sdw-wsrest.ecb.europa.eu/service/data/"
         self._start_date_ = parse("2003-01-01")
-        self._end_date_ = parse("2023-03-31")
+        self._end_date_ = parse("2023-04-28")
         self.df = pd.DataFrame()
 
     def set_period(self, start_date: datetime, end_date: datetime):

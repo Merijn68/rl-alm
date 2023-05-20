@@ -90,3 +90,9 @@ target/
 
 # ignore all .log files
 *.log
+
+# ignore all tensorboard logs
+tensorboard_logs/
+
+# ignore models created with stable_baselines
+models/

@@ -109,20 +109,20 @@ class Zerocurve(dataset.ECBData):
         self.origin = df.copy()
         self.reset()
 
-    def step(self, dt=1 / 252):
-        # Move one step forward in time, generating simulated data for one day
+    def step(self, dt=1):
+        # Move one step forward in time, generating simulated data for one timestep
         # using historic data to sample the yield curve movement.
         yield_data = self.yield_data
         yield_data_change = (yield_data - yield_data.shift()).dropna()
         # yield_data_change = yield_data_change[yield_data_change.index <= '1-jan-2020'] # pre-crisis
-        r1 = yield_data.iloc[-1] + yield_data_change.sample(
-            1, replace=True
+        r1 = (
+            yield_data.iloc[-1] + yield_data_change.sample(dt, replace=True).sum()
         )  # No random state is given - to ensure that each step is random
         last_day = yield_data.index[-1]
-        next_day = last_day + BDay(1)
+        next_day = last_day + BDay(dt)
         logger.debug(f"Stepping in zerocurve {next_day}.")
-        yield_data.loc[next_day] = r1.values[0]
-        # update zerocurve dataframe - still need to refactor this...
+        yield_data.loc[next_day] = r1
+        # update zerocurve dataframe
         yd = yield_data.iloc[-1].reset_index()
         yd.columns = ["tenor", "rate"]
         yd["rate_dt"] = next_day

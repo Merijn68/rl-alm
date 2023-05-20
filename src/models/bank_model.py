@@ -9,16 +9,12 @@ from pandas.tseries.offsets import DateOffset
 from datetime import timedelta
 from random import randrange
 from dateutil.relativedelta import relativedelta
-from src.models import predict
 from src.visualization import visualize
-from src.data import dataset
 from src.data.zerocurve import Zerocurve
-from src.data.interest import Interest
-import math
 
-MARGIN = 0  # 0.015
-FLOAT_FREQ_PER_YEAR = 2
-DAYS_OFFSET = BDay(0)
+MARGIN = 0.015  # fixed margin payed for IRS swaps
+FLOAT_FREQ_PER_YEAR = 2  # Frequency of interest rate payments for IRS swaps per year
+DAYS_OFFSET = BDay(0)  # Date offset from deal date to first settlement date
 
 
 class Bankmodel:
@@ -64,33 +60,35 @@ class Bankmodel:
         dates = dates.map(lambda x: x + BDay(1) if x.weekday() >= 5 else x)
         return dates
 
-    def _generate_mortgage_cashflow_(
-        self, principal, interest_rate, years, fixed_period
-    ):
-        n = years * 12  # number of mortgage payments
-        periods = fixed_period * 12
+    def _generate_mortgage_cashflow_(self, principal, interest_rate, years, periods):
+        n = years * 12  # number of mortgage payments in total
         principal_payment = round(principal / n)  # monthly principal payment
         r = interest_rate / 12  # monthly interest rate
         cashflow = []
-        cashflow.append((0, -principal))
-        for i in range(1, periods + 1):
+        cashflow.append((0, -principal, "principal"))
+        for i in range(0, periods):
             interest_paid = round(principal * r, 0)
             if i == periods:
                 principal_payment = principal
             principal = principal - principal_payment
-            cashflow.append((i, principal_payment + interest_paid))
-        cashflow_df = pd.DataFrame(cashflow, columns=["period", "cashflow"])
+            cashflow.append((i, interest_paid, "interest"))
+            cashflow.append((i, principal_payment, "principal"))
+        cashflow_df = pd.DataFrame(
+            cashflow, columns=["period", "cashflow", "cashflow_type"]
+        )
         return cashflow_df
 
     def _generate_mortgage_cashflows_(self, contracts: pd.DataFrame) -> pd.DataFrame:
         mortgage_tenor = 30
         dfs = []
         for _, row in contracts.iterrows():
+            periods = row.years * 12
             df_cashflows = self._generate_mortgage_cashflow_(
-                row.principal, row.interest / 100, mortgage_tenor, row.years
+                row.principal, row.interest / 100, mortgage_tenor, periods
             )
-            df_cashflows["value_dt"] = self._date_schedule_(
-                row.start_date, len(df_cashflows), offset="months"
+            schedule = self._date_schedule_(row.start_date, periods, offset="months")
+            df_cashflows["value_dt"] = df_cashflows["period"].map(
+                dict(enumerate(schedule))
             )
             df_cashflows["contract_no"] = row.contract_no
             df_cashflows["type"] = "mortgage"
@@ -154,24 +152,23 @@ class Bankmodel:
         cashflow = []
         rate = None
         interest = None
-        for i in range(1, periods + 1):
+        for i in range(0, periods):
             if fixed_float == "fixed":
                 rate = (base_rate + margin) / freq_per_year
                 interest = round((principal * rate / 100 * leg) / freq_per_year, 0)
-            cashflow.append((i, interest))
-        df = pd.DataFrame(cashflow, columns=["period", "cashflow"])
+            cashflow.append((i, interest, "interest"))
+        df = pd.DataFrame(cashflow, columns=["period", "cashflow", "cashflow_type"])
         df["rate_type"] = fixed_float
         df["fixed_rate"] = rate
         df["leg"] = leg
         first_payment_date = start_date + pd.DateOffset(months=12 / freq_per_year)
-        #       if first_payment_date.weekday() >= 5:
-        #            first_payment_date = first_payment_date + BDay(1)
-        #            first_payment_date = first_payment_date.to_pydatetime()
-        df["value_dt"] = self._date_schedule_(first_payment_date, len(df), offset=freq)
+        schedule = self._date_schedule_(first_payment_date, periods, offset=freq)
+        df["value_dt"] = df["period"].map(dict(enumerate(schedule)))
+        schedule = self._date_schedule_(start_date, periods, offset=freq)
         df["rateset_dt"] = pd.to_datetime(
             np.where(
                 df["rate_type"] == "float",
-                self._date_schedule_(start_date, len(df), offset=freq),
+                df["period"].map(dict(enumerate(schedule))),
                 None,
             )
         )
@@ -191,15 +188,15 @@ class Bankmodel:
         rec_freq = swap.loc[0, "rec_freq"]
         PAY_LEG = -1
         REC_LEG = 1
+
+        # Calculate Theoretical swap price
+        # To calculate the swap price, I assume that all floaters are 6m and all fixed rates annual.
+        # Thus - taking every second row of the floating discount factors gives me the fixed leg discount factors.
         if pay == "float":
             df_float = self._generate_swap_cashflows_leg(swap, pay, PAY_LEG, pay_freq)
         else:
             df_float = self._generate_swap_cashflows_leg(swap, rec, REC_LEG, rec_freq)
         df_npv = self.calculate_npv(zerocurve, df_float, self.pos_date)
-
-        # Theoretical swap price calculation
-        # To calculate the swap price, I assume that all floaters are 6m and all fixed rates annual.
-        # Thus - taking every second row of the floating discount factors gives me the fixed leg discount factors.
         df_annualized = df_npv[1::2].copy()
         avg_df = df_annualized["df"].mean()
         swap.base_rate = abs(
@@ -209,6 +206,7 @@ class Bankmodel:
             / swap["principal"]
             * 100
         )
+
         df_cashflows = pd.DataFrame()
         df_pay = self._generate_swap_cashflows_leg(swap, pay, PAY_LEG, pay_freq)
         df_rec = self._generate_swap_cashflows_leg(swap, rec, REC_LEG, rec_freq)
@@ -286,9 +284,9 @@ class Bankmodel:
             & (df["cashflow"].isna())
         ]
         # Merge contracts and floating cashflows to calculate interest
-        df_merged = df_swaps.merge(df_cflows, on="contract_no", how="inner")
+        # df_merged = df_swaps.merge(df_cflows, on="contract_no", how="inner")
         forward_curve = zerocurve.interpolate(start_date)
-        df_merged = df_merged.merge(
+        df_merged = df_cflows.merge(
             forward_curve, left_on="value_dt", right_on=forward_curve.index, how="left"
         )
         df_merged["cashflow"] = round(
@@ -314,9 +312,11 @@ class Bankmodel:
         self.nmd_maturity = maturity
         noncore = 1 - core
         cashflow = []
-        cashflow.append((1, round(-principal * noncore)))
-        cashflow.append((2, round(-principal * core)))
-        df_cashflows = pd.DataFrame(cashflow, columns=["period", "cashflow"])
+        cashflow.append((1, round(-principal * noncore), "principal"))
+        cashflow.append((2, round(-principal * core), "principal"))
+        df_cashflows = pd.DataFrame(
+            cashflow, columns=["period", "cashflow", "cashflow_type"]
+        )
         df_cashflows["value_dt"] = [
             # self.pos_date,
             self.pos_date + BDay(1),
@@ -345,14 +345,16 @@ class Bankmodel:
         periods = int(round(maturity / 12, 0))
         principal_payment = 0
         cashflow = []
-        for i in range(1, periods + 1):
+        cashflow.append((0, principal, "principal"))
+        for i in range(0, periods):
             if i == periods:
-                principal_payment = -round(principal)
-            cashflow.append((i, principal_payment + interest_paid))
-        df_cashflows = pd.DataFrame(cashflow, columns=["period", "cashflow"])
-        df_cashflows["value_dt"] = self._date_schedule_(
-            self.pos_date, len(df_cashflows), offset="years"
+                cashflow.append((i, -principal, "principal"))
+            cashflow.append((i, interest_paid, "interest"))
+        df_cashflows = pd.DataFrame(
+            cashflow, columns=["period", "cashflow", "cashflow_type"]
         )
+        schedule = self._date_schedule_(self.pos_date, periods, offset="years")
+        df_cashflows["value_dt"] = df_cashflows["period"].map(dict(enumerate(schedule)))
         df_cashflows["type"] = "Funding"
         df_cashflows["rate_type"] = "fixed"
         df_cashflows["contract_no"] = 0
@@ -363,7 +365,9 @@ class Bankmodel:
     def reset(self):
         self.pos_date = self.origin_pos_date
 
-    def calculate_npv(self, zerocurve: Zerocurve, df_cashflows, pos_date: datetime):
+    def calculate_npv(
+        self, zerocurve: Zerocurve, df_cashflows, pos_date: datetime
+    ) -> pd.DataFrame:
         """Calculate the PV of a series of cashflows given the zero curve"""
         if pos_date == None:
             pos_date = self.pos_date
@@ -385,7 +389,7 @@ class Bankmodel:
         )
         df_npv["rate"] = df_npv["rate"].ffill()
 
-        # Something strange here with pandas. It still gives me this warning
+        # Something strange here with pandas. It still gives me this warning even though I don't use iloc
         warnings.filterwarnings("ignore", "In a future version")
 
         # project future cashflows for floating leg swaps
@@ -406,16 +410,7 @@ class Bankmodel:
                 / FLOAT_FREQ_PER_YEAR
             ).round(0)
 
-        # df_npv.loc[mask, "cashflow"] = round(
-        #     (
-        #         df_npv.loc[mask, "principal"]
-        #         * df_npv.loc[mask, "rate"]
-        #         / 100
-        #         * df_npv.loc[mask, "leg"]
-        #     )
-        #     / FLOAT_FREQ_PER_YEAR,
-        #     0,
-        # )
+        warnings.filterwarnings("default", "In a future version")
 
         df_npv["pos_dt"] = pos_date
         df_npv["year_frac"] = round(
@@ -427,64 +422,15 @@ class Bankmodel:
 
         return df_npv
 
-    # def calculate_npv(self, zerocurve: Zerocurve):
-    #     """Calculate the NPV of the cashflows given the zero curve"""
-    #     pos_date = self.pos_date
-    #     df_forward = zerocurve.interpolate(pos_date)
-    #     if df_forward.empty:
-    #         logger.error("Zerocurve not found for date {pos_date}")
-    #         return 0
-    #     df = self.df_cashflows
-    #     if df.empty:
-    #         logger.warning("No cashflows setup for model.")
-    #         return 0
-    #     df_c = df[df["value_dt"] > self.pos_date]  # only include future cashflows
-    #     if df_c.empty:
-    #         logger.warning("No future cashflows at {pos_date}")
-    #         return 0
-    #     df_npv = df_c.merge(
-    #         df_forward, left_on="value_dt", right_on=df_forward.index, how="left"
-    #     )
-    #     df_npv["rate"] = df_npv["rate"].ffill()
-    #     # project future cashflows for floating leg swaps
-    #     df_swaps = self.df_swaps
-    #     if len(df_swaps.index):
-    #         df_cflows = df_npv[
-    #             (df_npv["type"] == "swap")
-    #             & (df_npv["rate_type"] == "float")
-    #             & (df_npv["cashflow"].isna())
-    #         ]
-    #         df_float = df_swaps.merge(df_cflows, on="contract_no", how="inner")
-    #         df_float["cashflow"] = round(
-    #             (df_float["principal"] * df_float["rate"] / 100 * df_float["leg"])
-    #             / FLOAT_FREQ_PER_YEAR,
-    #             0,
-    #         )
-    #         df_float.index = df_cflows.index
-    #         df_npv.update(
-    #             df_float["cashflow"].where(
-    #                 (df_npv["type"] == "swap")
-    #                 & (df_npv["rate_type"] == "float")
-    #                 & (df_npv["cashflow"].isna())
-    #             )
-    #         )
-    #     df_npv["pos_dt"] = pos_date
-    #     df_npv["year_frac"] = round(
-    #         (df_npv["value_dt"] - df_npv["pos_dt"]) / timedelta(365, 0, 0, 0), 5
-    #     )
-    #     df_npv["df"] = 1 / (1 + df_npv["rate"] / 100) ** df_npv["year_frac"]
-    #     # discount cashflows to pos_date
-    #     df_npv["npv"] = round(df_npv["cashflow"] * df_npv["df"], 2)
-
-    #     df_npv.to_excel("df_npv.xlsx")
-
-    #     return round(df_npv["npv"].sum(), 2)
-
-    def calculate_nii(self, zerocurve: Zerocurve):
+    def calculate_nii(self, zerocurve: Zerocurve, dt=1) -> float:
         # substraction of the interst expense - interest income
-        # To calculate this correctly I need to extend the cashflow model
-        # We need to seperate principal payments and interest payments
-        pass
+        df = self.df_cashflows
+        df = df[
+            (df["value_dt"] >= self.origin_pos_date)
+            & (df["value_dt"] < self.pos_date)
+            & (df["cashflow_type"] == "interest")
+        ]
+        return df["cashflow"].sum()
 
     def calculate_risk(
         self, zerocurve: Zerocurve, shock: int = 1, direction: str = "parallel"
@@ -628,8 +574,8 @@ class Bankmodel:
         ax.set_yticks(ax.get_yticks())
         ax.set_yticklabels(["{:0.0f}".format(x) for x in ax.get_yticks().tolist()])
 
-    def step(self):
-        self.pos_date = self.pos_date + BDay(1)
+    def step(self, dt=1):
+        self.pos_date = self.pos_date + BDay(dt)
         self.step_nmd()
 
 
