@@ -1,3 +1,5 @@
+""" Test the shower environment """
+
 import gymnasium as gym
 from gymnasium.envs.registration import register
 from stable_baselines3 import PPO, DQN
@@ -101,9 +103,8 @@ for name, model in models.items():
         model,
         env,
         n_eval_episodes=10,
-        deterministic=True,
+        deterministic=False,
     )
     print(f"{name} mean_reward={mean_reward:.2f} +/- {std_reward}")
 
 env.close()
-print("all done... That's all folks! ")
