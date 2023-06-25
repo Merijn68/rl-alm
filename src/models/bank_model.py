@@ -8,11 +8,12 @@ from pandas.tseries.offsets import BDay
 from pandas.tseries.offsets import DateOffset
 from datetime import timedelta
 from random import randrange
-from src.models.action_space import ActionSpace
-from src.models.observation_space import ObservationSpace
+
 from dateutil.relativedelta import relativedelta
 from src.visualization import visualize
 from src.data.zerocurve import Zerocurve
+from src.data.interest import Interest
+
 
 MARGIN = 0.015  # fixed margin payed for IRS swaps
 FLOAT_FREQ_PER_YEAR = 2  # Frequency of interest rate payments for IRS swaps per year
@@ -22,16 +23,21 @@ DAYS_OFFSET = BDay(0)  # Date offset from deal date to first settlement date
 class Bankmodel:
     """Cashflow model of a bank"""
 
-    def __init__(self, pos_date: datetime, zerocurve: Zerocurve):
+    def __init__(self):
+        self.zerocurve = Zerocurve()
+        self.zerocurve.read_data()
+        self.pos_date = self.zerocurve.df.index[-1] - BDay(2)
+        self.origin_pos_date = self.pos_date
         self.df_cashflows = pd.DataFrame()
         self.df_mortgages = pd.DataFrame()
         self.df_swaps = pd.DataFrame()
-        self.zerocurve = zerocurve
         self.nmd_pricipal = 0
         self.nmd_core = 1
         self.nmd_maturity = 0
-        self.pos_date = pos_date
-        self.origin_pos_date = pos_date
+
+        interest = Interest()
+        interest.read_data()
+        self.df_interest = interest.df
 
     def _random_date_(self, start: datetime, end: datetime) -> datetime:
         """return a random business date between start and end date"""
@@ -98,14 +104,13 @@ class Bankmodel:
         df_all = pd.concat([dfs[i] for i in range(len(contracts))], axis=0)
         return df_all
 
-    def generate_mortgage_contracts(
-        self, n: int, df_i: pd.DataFrame, amount: float = 100000
-    ):
+    def generate_mortgage_contracts(self, n: int, amount: float = 100000):
         """Generate a portfolio of mortgages"""
         # Generate mortgage portfolio of n mortgages, active at pos_date
         # probability of 10 years contracts is 10x higher then 1 year contract
         # as they can start 10 years before.
         # Devision in fixed interest period is dependend on the coupon rates
+
         category = np.random.choice(a=[0, 1, 2, 3], size=n, p=[0.03, 0.14, 0.23, 0.60])
         df = pd.DataFrame()
         df["category"] = category
@@ -125,9 +130,11 @@ class Bankmodel:
         df["period"] = (
             df["start_date"].to_numpy().astype("datetime64[M]")
         )  # trick to get 1th of the month
-        df = df.merge(df_i.reset_index(), how="left", on=["period", "fixed_period"])
+        df = df.merge(
+            self.df_interest.reset_index(), how="left", on=["period", "fixed_period"]
+        )
         df["interest"] = df["interest"].fillna(
-            df_i["interest"].iloc[-1]
+            self.df_interest["interest"].iloc[-1]
         )  # fill missing values with last coupon rate - not a nice solution
         df["contract_no"] = np.arange(len(df))  # assign a contract id
 
@@ -259,9 +266,6 @@ class Bankmodel:
         )
         df_cashflows = self._generate_swap_cashflows_(swap)
         self.df_swaps = pd.concat([self.df_swaps, swap])
-        logger.info(
-            f"Added {len(swap)} swap contracts to our portfolio. {len(self.df_swaps)} swaps in total."
-        )
         # self.df_swaps.to_excel("df_swaps.xlsx")
         self.df_cashflows = pd.concat([self.df_cashflows, df_cashflows])
 
@@ -577,25 +581,11 @@ class Bankmodel:
         self.step_nmd()
         self.zerocurve.step(dt)
 
-    def get_state() -> ObservationSpace:
-        """Return the state of the model to be used as input for the RL model"""
-        # information about the cashflow position, and the development of the yield curve over the last 5 periods.
-
-        observation_space = ObservationSpace()
-
-        observation_space.cashflow_space
-
-        return self.observation_space
-
-        pass
-
-    def apply_action(self, action: ActionSpace):
-        buy_or_sell, tenor, amount = action
-        print(buy_or_sell, tenor, amount)
+    def apply_action(self, buy_or_sell, tenor, amount):
         self.generate_swap_contract(buy_or_sell, tenor, amount)
 
-    def get_reward(state: ObservationSpace):
-        pass
+    def get_reward(self):
+        return self.calculate_nii()
 
 
 def get_freq_per_year(freq: str) -> int:

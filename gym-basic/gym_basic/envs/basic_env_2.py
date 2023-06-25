@@ -40,7 +40,10 @@ class BasicEnv2(gym.Env):
         return state, info
 
     def render(self):
-        print(self.reward)
+        # Implement viz
+        if self.render_mode == "human":
+            self.l.set_data(self.steps, self.states)
+            self.writer.grab_frame()
 
     def close(self):
         return super().close()

@@ -5,17 +5,18 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.animation import PillowWriter, FFMpegWriter
 import seaborn as sns
-from src.data.definitions import FIGURES_PATH
+from src.data.definitions import FIGURES_PATH, FFMPEG_PATH
 from pathlib import Path
 
 
 class ShowerEnv(Env):
     metadata = {"render_modes": ["human", "rgb_array"], "render_fps": 15}
 
-    def __init__(self, render_mode=None, seed=None):
+    def __init__(self, start=None, render_mode=None, seed=None):
         super().__init__()
 
         assert render_mode is None or render_mode in self.metadata["render_modes"]
+        self.start = start
         self.render_mode = render_mode
         # Actions we can take, down, stay, up
         self.action_space = Discrete(3)
@@ -77,7 +78,8 @@ class ShowerEnv(Env):
         # Implement viz
         if self.render_mode == "human":
             self.l.set_data(self.steps, self.states)
-            self.writer.grab_frame()
+            if self.writer is not None:
+                self.writer.grab_frame()
 
     def set_render_output(self, filename: str, title: str = "Movie"):
         if self.writer is not None:
@@ -85,10 +87,9 @@ class ShowerEnv(Env):
 
         moviedata = dict(title=title, artist="M. van Miltenburg")
         self.figure = plt.figure()
+
         # This will need to be changed to match your directory.
-        plt.rcParams["animation.ffmpeg_path"] = Path(
-            r"C:\Program Files\ffmpeg-6.0-essentials_build\bin", r"ffmpeg.exe"
-        )
+        plt.rcParams["animation.ffmpeg_path"] = Path(FFMPEG_PATH, r"ffmpeg.exe")
         plt.xlim(0, 60)
         plt.ylim(0, 100)
         (self.l,) = plt.plot([], [], "k-")
@@ -96,7 +97,7 @@ class ShowerEnv(Env):
         # highlight the ideal temerature range
         plt.axhspan(37, 39, color="blue", alpha=0.3)
 
-        writer = FFMpegWriter(fps=5, metadata=moviedata)
+        writer = FFMpegWriter(fps=self.metadata["render_fps"], metadata=moviedata)
         outfile = Path(FIGURES_PATH, filename).with_suffix(".mp4")
         writer.setup(self.figure, outfile, dpi=100)
         self.writer = writer

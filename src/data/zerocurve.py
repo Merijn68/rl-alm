@@ -120,7 +120,6 @@ class Zerocurve(dataset.ECBData):
         )  # No random state is given - to ensure that each step is random
         last_day = yield_data.index[-1]
         next_day = last_day + BDay(dt)
-        logger.debug(f"Stepping in zerocurve {next_day}.")
         yield_data.loc[next_day] = r1
         # update zerocurve dataframe
         yd = yield_data.iloc[-1].reset_index()
