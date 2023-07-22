@@ -1,10 +1,11 @@
 # Lets try with vectorized environments
 import gymnasium as gym
-import sys
+
 from stable_baselines3 import PPO
 from stable_baselines3.common.vec_env import SubprocVecEnv
 from stable_baselines3.common.utils import set_random_seed
 from datetime import datetime
+import sys
 from pathlib import Path
 
 ROOT_DIR = Path(__file__).parents[2].absolute()
@@ -40,9 +41,24 @@ def main():
     num_cpu = 2  # Number of processes to use
 
     env = gym.make(env_id, render_mode="human")
+    env.set_render_output("Random")
+    env.reset()
+    sample = env.observation_space.sample()
+    print(env.action_space.nvec)
+
+    score = 0
+    terminated = False
+    truncated = False
+    while not terminated and not truncated:
+        action = env.action_space.sample()
+        obs, reward, terminated, truncated, info = env.step(action)
+        score = score + reward
+        env.render()
+    env.close()
+    print("score: ", score)
 
     # Create the vectorized environment
-    vec_env = SubprocVecEnv([make_env(env_id, rank=i) for i in range(num_cpu)])
+    vec_env = SubprocVecEnv([make_env(env_id, rank=i + 1) for i in range(num_cpu)])
 
     # Stable Baselines provides you with make_vec_env() helper
     # which does exactly the previous steps for you.
@@ -59,7 +75,7 @@ def main():
         learning_rate=linear_schedule(0.001),
     )
 
-    model.learn(total_timesteps=100, progress_bar=True)  # 3e5
+    model.learn(total_timesteps=3e5, progress_bar=True)  # 3e5 -- 300_000
     modelpath = Path(
         MODEL_PATH,
         "PPO_V" + "_" + datetime.now().strftime("%Y%m%d-%H%M%S") + ".zip",
@@ -81,6 +97,8 @@ def main():
         score = score + reward
         env.render()
     env.close()
+
+    print("score: ", score)
 
     print("all done... That's all folks! ")
 
