@@ -53,7 +53,7 @@ def main():
         action = env.action_space.sample()
         obs, reward, terminated, truncated, info = env.step(action)
         score = score + reward
-        env.render()
+        # env.render()
     env.close()
     print("score: ", score)
 
@@ -75,7 +75,7 @@ def main():
         learning_rate=linear_schedule(0.001),
     )
 
-    model.learn(total_timesteps=3e5, progress_bar=True)  # 3e5 -- 300_000
+    model.learn(total_timesteps=3e5, progress_bar=True)  # 300_000 steps
     modelpath = Path(
         MODEL_PATH,
         "PPO_V" + "_" + datetime.now().strftime("%Y%m%d-%H%M%S") + ".zip",
@@ -95,7 +95,7 @@ def main():
         action, _state = model.predict(obs)
         obs, reward, terminated, truncated, info = env.step(action)
         score = score + reward
-        env.render()
+        # env.render()
     env.close()
 
     print("score: ", score)
