@@ -16,7 +16,8 @@ def main():
     env = gym.make(env_id, render_mode="human")
     env = gym.wrappers.PassiveEnvChecker(env)
 
-    model_name = "PPO_V_20230714-121244"
+    # model_name = "PPO_V_20230722-160348"
+    model_name = "PPO_V_DurationMatching"
 
     env.set_render_output(model_name)
     model = PPO.load(Path(MODEL_PATH, model_name), env=env)
@@ -32,10 +33,11 @@ def main():
         obs, reward, terminated, truncated, info = env.step(action)
         score = score + reward
 
-    env.close()
     t1 = time.time()
     print(f"Time: {t1-t:.2f}")
     print(f"score: {score:.2f}")
+
+    env.close()
 
     # evaluate the model
     env = gym.make(env_id, render_mode="human")

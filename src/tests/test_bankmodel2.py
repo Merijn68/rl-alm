@@ -38,7 +38,7 @@ def linear_schedule(initial_value: float):
 
 def main():
     env_id = "gym_basic:bank-v2"
-    num_cpu = 2  # Number of processes to use
+    num_cpu = 4  # Number of processes to use
 
     env = gym.make(env_id, render_mode="human")
     env.set_render_output("Random")
@@ -75,7 +75,7 @@ def main():
         learning_rate=linear_schedule(0.001),
     )
 
-    model.learn(total_timesteps=3e5, progress_bar=True)  # 300_000 steps
+    model.learn(total_timesteps=3e6, progress_bar=True)  # 3000_000 steps
     modelpath = Path(
         MODEL_PATH,
         "PPO_V" + "_" + datetime.now().strftime("%Y%m%d-%H%M%S") + ".zip",
