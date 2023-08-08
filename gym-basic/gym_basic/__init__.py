@@ -25,3 +25,8 @@ register(
     entry_point="gym_basic.envs:BankEnv2",
     max_episode_steps=252,
 )
+register(
+    id="bank-v3",
+    entry_point="gym_basic.envs:BankEnv3",
+    max_episode_steps=252,
+)

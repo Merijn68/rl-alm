@@ -38,6 +38,7 @@ def lineplot(
     else:
         ax = sns.lineplot(data=data, x=x, y=y, hue=hue)
     ax.set_title(title)
+    ax.xaxis.set_major_locator(mpl.dates.YearLocator())
 
     if x_label:
         ax.set_xlabel(x_label)

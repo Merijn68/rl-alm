@@ -2,7 +2,7 @@ import requests
 import pandas as pd
 import io
 from loguru import logger
-from datetime import datetime
+from datetime import datetime, timedelta, date
 from dateutil.parser import parse
 from pathlib import Path
 from src.data.definitions import DATA_RAW
@@ -12,7 +12,12 @@ class ECBData:
     def __init__(self):
         self._url_ = "https://sdw-wsrest.ecb.europa.eu/service/data/"
         self._start_date_ = parse("2003-01-01")
-        self._end_date_ = parse("2023-04-28")
+
+        today = date.today()
+        first = today.replace(day=1)
+        last_month = first - timedelta(days=1)
+        self._end_date_ = last_month
+        # self._end_date_ = parse("2023-04-28")
         self.df = pd.DataFrame()
 
     def set_period(self, start_date: datetime, end_date: datetime):
