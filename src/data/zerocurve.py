@@ -9,6 +9,7 @@ from src.models import predict
 from src.data.definitions import DATA_RAW
 from src.data import dataset
 
+
 DATAFLOW = "YC"  # Yield Curve
 FREQ = "B"  # Daily - buisiness days
 REF_AREA = "U2"  # Euro area (changing composition)
