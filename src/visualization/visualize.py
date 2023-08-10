@@ -143,9 +143,9 @@ def curveplot(
         start_date + np.timedelta64(num_steps, "M"),
         dtype="datetime64[M]",
     )
+    if num_sim_steps > len(sim_steps):  # This may vary with leap years
+        sim_steps = np.append(sim_steps, sim_steps[-1] + np.timedelta64(1, "M"))
 
-    # data_steps = np.linspace(0, num_data_steps - 1, num_data_steps)
-    # sim_steps = np.linspace(num_data_steps - 1, num_steps, num_sim_steps)
     plt.figure(figsize=figsize)
 
     for idx, tenor in enumerate(SWAP_TENORS):
