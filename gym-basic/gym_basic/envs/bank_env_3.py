@@ -5,12 +5,13 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 from matplotlib.animation import FFMpegWriter
 from gymnasium import Env
-from src.models.action_space2 import ActionSpace
-from src.models.observation_space2 import ObservationSpace
-from src.models.bank_model2 import Bankmodel2
+from src.models.action_space3 import ActionSpace
+from src.models.observation_space3 import ObservationSpace
+from src.models.bank_model3 import Bankmodel3
+from src.visualization import visualize
 from src.data.definitions import FIGURES_PATH
 
-EPISODE_LENGTH = 12 * 10
+EPISODE_LENGTH = 60
 
 
 class BankEnv3(Env):
@@ -22,16 +23,34 @@ class BankEnv3(Env):
         assert render_mode is None or render_mode in self.metadata["render_modes"]
 
         self.render_mode = render_mode
-
-        self.bankmodel = Bankmodel2()
+        self.bankmodel = Bankmodel3()
 
         # Observation space
         self.observation_space = ObservationSpace()
-        self.action_space = ActionSpace()
+        self.action_space = ActionSpace(self.bankmodel.num_actions)
 
         # Set episode length
         self.episode_length = EPISODE_LENGTH
         self.timestep = 0
+
+        # Initialize scaling variables for rates and cashflows
+        self.min_cashflow = 0
+        self.max_cashflow = 0
+        self.min_interest_rate = 0.1
+        self.max_interest_rate = 0
+        self.min_zero_rate = 0
+        self.max_zero_rate = 0
+
+        self.episode_rewards = []
+        self.total_reward = 0
+        self.episode_nii = []
+        self.total_nii = 0
+        self.episode_risk_penalty = []
+        self.total_risk_penalty = 0
+        self.episode_liquidity_penalty = []
+        self.total_liquidity_penalty = 0
+
+        self.state = self.get_state()
 
         # Initialize variable for mpeg writer
         self.writer = None
@@ -43,10 +62,15 @@ class BankEnv3(Env):
         if not (self.action_space.contains(action)):
             print(action)
             raise ValueError("Action not in action space")
+        allocation = self.action_space.normalize_allocations(action)
 
-        self.bankmodel.step(action, self.timestep)
-        self.state = self._get_state(self.bankmodel.calculate_cashflows("all"))
-        reward = self.bankmodel.get_reward()
+        self.bankmodel.step(allocation, self.timestep)
+        self.state = self.get_state()
+        reward, nii, risk_penalty, liquidity_penalty = self.bankmodel.get_reward()
+        self.total_reward += reward
+        self.total_nii += nii
+        self.total_risk_penalty += risk_penalty
+        self.total_liquidity_penalty += liquidity_penalty
 
         # Reduce episode length by 1 second
         self.timestep += 1
@@ -54,13 +78,17 @@ class BankEnv3(Env):
         truncated = False
         # Check if episode is done
         if self.episode_length <= 0:
+            # update statistics
+            self.episode_rewards.append(self.total_reward)
+            self.episode_nii.append(self.total_nii)
+            self.episode_risk_penalty.append(self.total_risk_penalty)
+            self.episode_liquidity_penalty.append(self.total_liquidity_penalty)
             terminated = True
         else:
             terminated = False
 
         # Set placeholder for info
         info = {}
-
         return self.state, reward, terminated, truncated, info
 
     def render(self):
@@ -75,32 +103,77 @@ class BankEnv3(Env):
                 self.writer.grab_frame()
 
     def plot(self):
-        """Plot the cashflows of the bank model for testing"""
+        """
+        Plot the current situation of the bank model
+        This includes projected cashflows, mortgages, funding, interest rates and zero rates
+        """
+
+        mortgages = self.bankmodel.sa_mortgages
+        filter = mortgages["maturity_date"] > self.bankmodel.pos_date
+        mortgages = mortgages[filter]
+
+        funding = self.bankmodel.sa_funding
+        filter = funding["maturity_date"] > self.bankmodel.pos_date
+        funding = funding[filter]
+
+        interest_rates = self.bankmodel.hullwhite.get_simulated_interest_rates(
+            self.timestep - 1
+        )
+        zero_rates = self.bankmodel.hullwhite.get_simulated_zero_rates(
+            self.timestep - 1
+        )
+        cf_proj_cashflows = self.bankmodel.calculate_cashflows("all")
         cf_funding = self.bankmodel.calculate_cashflows("funding")
         cf_mortgages = self.bankmodel.calculate_cashflows("mortgages")
-        cf_all = self.bankmodel.calculate_cashflows("all")
-        x = np.arange(len(cf_funding))
-        width = 0.23
-        _, ax = plt.subplots()
-        ax.bar(x - width / 2, cf_funding["cashflow"], width, label="Funding")
-        ax.bar(x + width / 2, cf_mortgages["cashflow"], width, label="Mortgages")
-        ax.plot(
-            x, cf_all["cashflow"], color="red", linestyle="-", marker="o", label="all"
+
+        # Plot cashflows
+        visualize.situational_plot(
+            self.bankmodel.pos_date,
+            cf_proj_cashflows,
+            cf_funding,
+            cf_mortgages,
+            interest_rates,
+            zero_rates,
+            mortgages,
+            funding,
+            title="Bank model",
         )
 
-        ax.set_xlabel("years")
-        ax.set_ylabel("cashflow")
-        ax.set_title("Future cashflows")
-        ax.set_xticks(x)
-        ax.legend(loc="upper left")
-        plt.show()
+    def plot_rewards(self):
+        visualize.plot_rewards(
+            self.episode_rewards,
+            self.episode_nii,
+            self.episode_risk_penalty,
+            self.episode_liquidity_penalty,
+        )
 
-    def _get_state(self, cf: np.ndarray):
-        pos_date = self.bankmodel.pos_date
-        if len(cf) == 0:
-            state = np.zeros(self.observation_space.shape, dtype=np.int32)
-        else:
-            state = cf["cashflow"]
+    def get_state(self):
+        """the obervable state of the bank at each time step"""
+        cf = self.bankmodel.calculate_cashflows("all")
+        " Current interest rates"
+        i = self.bankmodel.hullwhite.get_simulated_interest_rates(self.timestep - 1)
+        z = self.bankmodel.hullwhite.get_simulated_zero_rates(self.timestep - 1)
+
+        self.min_cashflow = min(self.min_cashflow, min(cf["cashflow"]))
+        self.max_cashflow = max(self.max_cashflow, max(cf["cashflow"]))
+        self.min_interest_rate = min(self.min_interest_rate, min(i))
+        self.max_interest_rate = max(self.max_interest_rate, max(i))
+        self.min_zero_rate = min(self.min_zero_rate, min(z))
+        self.max_zero_rate = max(self.max_zero_rate, max(z))
+
+        scaled_cf = (cf["cashflow"] - self.min_cashflow) / (
+            (self.max_cashflow - self.min_cashflow) + 1e-6
+        )
+        scaled_i = (i - self.min_interest_rate) / (
+            (self.max_interest_rate - self.min_interest_rate) + 1e-6
+        )
+        scaled_z = (z - self.min_zero_rate) / (
+            (self.max_zero_rate - self.min_zero_rate) + 1e-6
+        )
+
+        state = np.concatenate((scaled_cf[:, np.newaxis], scaled_z, scaled_i)).reshape(
+            self.observation_space.shape
+        )
         if not (self.observation_space.contains(state)):
             print(state.shape)
             print(state)
@@ -112,13 +185,18 @@ class BankEnv3(Env):
         # Reset the bank model
         if seed is not None:
             self.seed = seed
-
         self.bankmodel.reset()
-
-        self.state = self._get_state(self.bankmodel.calculate_cashflows("all"))
+        self.state = self.get_state()
 
         # Reset the episode length
         self.episode_length = EPISODE_LENGTH
+        self.timestep = 0
+
+        # Reset the statistics
+        self.total_reward = 0
+        self.total_nii = 0
+        self.total_risk_penalty = 0
+        self.total_liquidity_penalty = 0
 
         info = {}
 

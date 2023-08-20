@@ -3,19 +3,172 @@ import pandas as pd
 import numpy as np
 import matplotlib as mpl
 from matplotlib import pyplot as plt
+import seaborn as sns
 from pathlib import Path
 from typing import Tuple
+from datetime import datetime, timedelta
 
 from src.data.definitions import FIGURES_PATH
 
+TENORS = {
+    "ON": 0,
+    "IF_3M": 3,
+    "IF_6M": 6,
+    "IF_9M": 9,
+    "IF_1Y": 12,
+    "IF_1Y3M": 15,
+    "IF_1Y6M": 18,
+    "IF_2Y": 24,
+    "IF_3Y": 36,
+    "IF_4Y": 48,
+    "IF_5Y": 60,
+    "IF_7Y": 84,
+    "IF_10Y": 120,
+    "IF_15Y": 180,
+    "IF_30Y": 360,
+}
+
+
 # Generic setup parameters for Matplotlib
-figsize = (10, 6)
+FIGSIZE = (10, 6)
 mpl.rcParams["pdf.fonttype"] = 42
 mpl.rcParams["ps.fonttype"] = 42
 mpl.rcParams["font.family"] = "Arial"
 mpl.rcParams["font.family"] = "Arial"
-mpl.rcParams["figure.figsize"] = figsize
+mpl.rcParams["figure.figsize"] = FIGSIZE
 sns.set_style("darkgrid")
+sns.set()
+
+
+def situational_plot(
+    pos_date,
+    cf_proj_cashflows,
+    cf_funding,
+    cf_mortgages,
+    interest_rates,
+    zero_rates,
+    mortgages,
+    funding,
+    num_cols: int = 2,
+    num_rows: int = 2,
+    title: str = "",
+    figsize: Tuple[int, int] = FIGSIZE,
+    figurepath: Path = Path(FIGURES_PATH),
+) -> plt.Axes:
+    """Plot the current state of the Bank Model"""
+
+    fig, axes = plt.subplots(ncols=num_cols, nrows=num_rows, figsize=figsize)
+    fig.suptitle(title + " " + str(pos_date))
+    ax = axes[0, 0]
+    # First plot is the projected cashflows
+    ax.set_title("Projected cashflows")
+    years = np.arange(0, 31)
+    differences = cf_mortgages["cashflow"] + cf_funding["cashflow"]
+    data = {
+        "Years": years,
+        "Mortgages": cf_mortgages["cashflow"],
+        "Funding": cf_funding["cashflow"],
+        "Surplus": np.maximum(differences, 0),
+        "Shortage": np.minimum(differences, 0),
+    }
+    sns.barplot(
+        data=data, x="Years", y="Mortgages", color="skyblue", label="Mortgages", ax=ax
+    )
+    sns.barplot(
+        data=data, x="Years", y="Funding", color="coral", label="Funding", ax=ax
+    )
+    sns.barplot(
+        data=data,
+        x="Years",
+        y="Surplus",
+        color="lime",
+        label="Surplus",
+        ax=ax,
+    )
+    sns.barplot(
+        data=data,
+        x="Years",
+        y="Shortage",
+        color="red",
+        label="Shortage",
+        ax=ax,
+    )
+    ax.set_xlabel("Years")
+    ax.set_ylabel("Amount")
+    ax.legend()
+
+    # Second plot is the zero rates per tenor
+    ax = axes[0, 1]
+    start_date = pos_date
+    dates = [
+        start_date + np.array(tenor, "timedelta64[M]") for tenor in TENORS.values()
+    ]
+
+    ax.set_title("Zero rates")
+    sns.lineplot(
+        x=dates,
+        y=zero_rates[:, 0],
+        ax=ax,
+    )
+    ax.set_xlabel("Tenors")
+    ax.set_ylabel("Rates")
+
+    ax = axes[1, 0]
+    ax.set_title("Mortgages outstanding")
+    data = {"Tenor": mortgages["tenor"], "Principal": mortgages["principal"]}
+    df = pd.DataFrame(data)
+    total_per_tenor = df.groupby("Tenor")["Principal"].sum().reset_index()
+    sns.barplot(ax=ax, x="Tenor", y="Principal", data=total_per_tenor)
+
+    ax = axes[1, 1]
+    ax.set_title("Funding outstanding")
+    data = {"Tenor": funding["tenor"], "Principal": funding["principal"] * -1}
+    df = pd.DataFrame(data)
+    total_per_tenor = df.groupby("Tenor")["Principal"].sum().reset_index()
+    sns.barplot(ax=ax, x="Tenor", y="Principal", data=total_per_tenor)
+    min_value = 0
+    max_value = max(axes[1, 0].get_ylim()[1], axes[1, 1].get_ylim()[1])
+    axes[1, 0].set_ylim(min_value, max_value)
+    axes[1, 1].set_ylim(min_value, max_value)
+
+    plt.subplots_adjust(hspace=0.5)
+    plt.tight_layout()
+    plt.show()
+
+
+def plot_rewards(
+    episode_rewards,
+    episode_nii,
+    episode_risk_penalty,
+    episode_liquidity_penalty,
+    figsize: Tuple[int, int] = FIGSIZE,
+    name: str = "rewards",
+    figurepath: Path = Path(FIGURES_PATH),
+) -> plt.Axes:
+    plt.title(f"Rewards for {len(episode_rewards)} episodes")
+    plt.xlabel("Episode")
+    plt.ylabel("Reward")
+    plt.xlim([0, len(episode_rewards)])
+    all_range = np.concatenate(
+        [
+            episode_rewards,
+            episode_nii,
+            episode_risk_penalty,
+            episode_liquidity_penalty,
+        ]
+    )
+    plt.ylim(
+        [
+            min(all_range),
+            max(all_range),
+        ]
+    )
+    plt.plot(np.array(episode_rewards), label="Reward")
+    # plt.plot(np.array(episode_nii), label="NII")
+    # plt.plot(np.array(episode_risk_penalty), label="Risk Penalty")
+    # plt.plot(np.array(episode_liquidity_penalty), label="Liquidity")
+    plt.legend()
+    plt.show()
 
 
 def lineplot(
@@ -25,7 +178,7 @@ def lineplot(
     x_label: str = "",
     y_label: str = "",
     hue: str = "",
-    figsize: Tuple[int, int] = figsize,
+    figsize: Tuple[int, int] = FIGSIZE,
     name: str = "lineplot",
     title: str = "",
     figurepath: Path = Path(FIGURES_PATH),
@@ -55,7 +208,7 @@ def barplot(
     x_label: str = "",
     y_label: str = "",
     hue: str = "",
-    figsize: Tuple[int, int] = figsize,
+    figsize: Tuple[int, int] = FIGSIZE,
     name: str = "lineplot",
     title: str = "",
     figurepath: Path = Path(FIGURES_PATH),
@@ -80,7 +233,7 @@ def barplot(
 def bpvplot(
     bpv: pd.DataFrame,
     limits: pd.DataFrame,
-    figsize: Tuple[int, int] = figsize,
+    figsize: Tuple[int, int] = FIGSIZE,
     name: str = "bpv_profile",
     title: str = "",
     figurepath: Path = Path(FIGURES_PATH),
@@ -119,7 +272,7 @@ def curveplot(
     curve_data: np.ndarray,
     sim_data: np.ndarray,
     start_date: np.datetime64,
-    figsize: Tuple[int, int] = figsize,
+    figsize: Tuple[int, int] = FIGSIZE,
     name: str = "curveplot",
     figurepath: Path = Path(FIGURES_PATH),
     title: str = "Simulated Interest Rate Curves with Correlation",
