@@ -59,42 +59,37 @@ def situational_plot(
 
     fig, axes = plt.subplots(ncols=num_cols, nrows=num_rows, figsize=figsize)
     fig.suptitle(title + " " + str(pos_date))
+
     ax = axes[0, 0]
-    # First plot is the projected cashflows
-    ax.set_title("Projected cashflows")
+    # First plot is the projected netted cashflows
+    ax.set_title("Net Projected cashflows")
     years = np.arange(0, 31)
     differences = cf_mortgages["cashflow"] + cf_funding["cashflow"]
     data = {
         "Years": years,
-        "Mortgages": cf_mortgages["cashflow"],
-        "Funding": cf_funding["cashflow"],
         "Surplus": np.maximum(differences, 0),
         "Shortage": np.minimum(differences, 0),
     }
-    sns.barplot(
-        data=data, x="Years", y="Mortgages", color="skyblue", label="Mortgages", ax=ax
-    )
-    sns.barplot(
-        data=data, x="Years", y="Funding", color="coral", label="Funding", ax=ax
-    )
+    ax.axhline(y=5000, color="r", linestyle="--", label="Threshold")
+    ax.axhline(y=-5000, color="r", linestyle="--")
     sns.barplot(
         data=data,
         x="Years",
         y="Surplus",
-        color="lime",
-        label="Surplus",
+        color="blue",
+        label="Net Cashflow",
         ax=ax,
     )
     sns.barplot(
         data=data,
         x="Years",
         y="Shortage",
-        color="red",
-        label="Shortage",
+        color="blue",
         ax=ax,
     )
     ax.set_xlabel("Years")
     ax.set_ylabel("Amount")
+
     ax.legend()
 
     # Second plot is the zero rates per tenor
@@ -110,26 +105,65 @@ def situational_plot(
         y=zero_rates[:, 0],
         ax=ax,
     )
+
     ax.set_xlabel("Tenors")
     ax.set_ylabel("Rates")
 
     ax = axes[1, 0]
-    ax.set_title("Mortgages outstanding")
-    data = {"Tenor": mortgages["tenor"], "Principal": mortgages["principal"]}
-    df = pd.DataFrame(data)
-    total_per_tenor = df.groupby("Tenor")["Principal"].sum().reset_index()
-    sns.barplot(ax=ax, x="Tenor", y="Principal", data=total_per_tenor)
+    ax.set_title("Outstanding Mortgages and Bonds")
+    m = {
+        "tenor": mortgages["tenor"],
+        "principal": mortgages["principal"],
+        "type": "Mortgages",
+    }
+    f = {
+        "tenor": funding["tenor"],
+        "principal": funding["principal"] * -1,
+        "type": "Funding",
+    }
+    df = pd.concat([pd.DataFrame(m), pd.DataFrame(f)])
+    total_per_tenor = df.groupby(["type", "tenor"])["principal"].sum().reset_index()
+    sns.barplot(ax=ax, x="tenor", y="principal", hue="type", data=total_per_tenor)
 
     ax = axes[1, 1]
-    ax.set_title("Funding outstanding")
-    data = {"Tenor": funding["tenor"], "Principal": funding["principal"] * -1}
-    df = pd.DataFrame(data)
-    total_per_tenor = df.groupby("Tenor")["Principal"].sum().reset_index()
-    sns.barplot(ax=ax, x="Tenor", y="Principal", data=total_per_tenor)
-    min_value = 0
-    max_value = max(axes[1, 0].get_ylim()[1], axes[1, 1].get_ylim()[1])
-    axes[1, 0].set_ylim(min_value, max_value)
-    axes[1, 1].set_ylim(min_value, max_value)
+    ax.clear()
+    # Remove spines and ticks
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+    ax.spines["bottom"].set_visible(False)
+    ax.spines["left"].set_visible(False)
+    ax.tick_params(top=False, bottom=False, left=False, right=False)
+    ax.xaxis.set_ticks([])  # Hide x-axis ticks
+    ax.yaxis.set_ticks([])  # Hide y-axis ticks
+    ax.set_facecolor("none")  # Set background color to be transparent
+
+    # Calculate the differences
+    df_wide = (
+        df.groupby(["tenor", "type"])["principal"]
+        .sum()
+        .unstack()
+        .reset_index()
+        .fillna(0)
+    )
+    df_wide["difference"] = df_wide["Mortgages"] - df_wide["Funding"]
+
+    # Calculate total differences
+    total_differences = df_wide["difference"].sum()
+
+    # Construct table data
+    table_data = [
+        ["Total Mortgages", sum(mortgages["principal"])],
+        ["Total Funding", sum(funding["principal"])],
+        ["Total Difference", total_differences],
+    ]
+
+    # for tenor, diff in zip(df_wide["tenor"], df_wide["difference"]):
+    #    table_data.append([f"Difference at Tenor {tenor}", diff])
+
+    table = ax.table(cellText=table_data, loc="center", cellLoc="left")
+    table.auto_set_font_size(False)
+    table.set_fontsize(10)
+    table.scale(1.2, 1.2)
 
     plt.subplots_adjust(hspace=0.5)
     plt.tight_layout()
@@ -163,10 +197,10 @@ def plot_rewards(
             max(all_range),
         ]
     )
-    plt.plot(np.array(episode_rewards), label="Reward")
-    # plt.plot(np.array(episode_nii), label="NII")
-    # plt.plot(np.array(episode_risk_penalty), label="Risk Penalty")
-    # plt.plot(np.array(episode_liquidity_penalty), label="Liquidity")
+    plt.plot(np.array(episode_rewards), label="Reward", color="red")
+    plt.plot(np.array(episode_nii), label="NII", color="blue")
+    plt.plot(np.array(episode_risk_penalty), label="Risk Penalty", color="green")
+    plt.plot(np.array(episode_liquidity_penalty), label="Liquidity", color="orange")
     plt.legend()
     plt.show()
 

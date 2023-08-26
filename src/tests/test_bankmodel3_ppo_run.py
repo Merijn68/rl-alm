@@ -13,7 +13,7 @@ def main():
     from src.data.definitions import MODEL_PATH, TENSORBOARD_LOGS
 
     env_id = "gym_basic:bank-v3"
-    model_name = "PPO_V_NoLimit300000"
+    model_name = "PPO_V_NoLimit600000"
     """"
     env = gym.make(env_id, render_mode="human")
     # env = gym.wrappers.PassiveEnvChecker(env)

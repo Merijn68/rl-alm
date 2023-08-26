@@ -1,14 +1,11 @@
 # Lets try with vectorized environments
 import gymnasium as gym
-import matplotlib.pyplot as plt
 import numpy as np
 from stable_baselines3 import PPO
-from stable_baselines3.common.vec_env import SubprocVecEnv
 from stable_baselines3.common.utils import set_random_seed
 from stable_baselines3.common.callbacks import BaseCallback
 
 
-from datetime import datetime
 import sys
 import os
 from pathlib import Path
@@ -56,19 +53,6 @@ class RewardCallback(BaseCallback):
         return True
 
 
-def make_env(env_id: str, rank: int, seed: int = 0):
-    """Utility function for multiprocessed env."""
-
-    def _init():
-        env = gym.make(env_id, render_mode="human")
-        # env = FrameStack(FlattenObservation(env), 4)
-        env.reset(seed=seed + rank)
-        return env
-
-    set_random_seed(seed)
-    return _init
-
-
 def linear_schedule(initial_value: float):
     """Linear learning rate schedule."""
 
@@ -87,7 +71,6 @@ def get_innermost_env(env):
 
 def main():
     env_id = "gym_basic:bank-v3"
-    num_cpu = 1  # Number of processes to use - this does not work correct on windows
 
     # Create log dir
     log_dir = "tmp/"
