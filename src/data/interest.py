@@ -32,7 +32,6 @@ class Interest(dataset.ECBData):
         df = self.df
         if df.empty:
             return response
-
         df["fixed_period"] = df["KEY"].map(
             {
                 "MIR.M.NL.B.A2CC.F.R.A.2250.EUR.N": "<= 1 year",
@@ -40,11 +39,10 @@ class Interest(dataset.ECBData):
                 "MIR.M.NL.B.A2CC.O.R.A.2250.EUR.N": "5>10 years",
                 "MIR.M.NL.B.A2CC.P.R.A.2250.EUR.N": ">10 years",
             }
-        )
-        df = df.filter(["TIME_PERIOD", "fixed_period", "OBS_VALUE"], axis=1)
-        df.columns = ["period", "fixed_period", "interest"]
-        df["period"] = pd.to_datetime(df["period"])
-        df["fixed_period"] = df["fixed_period"].astype("string")
+        ).astype("string")
+        df["period"] = pd.to_datetime(df["TIME_PERIOD"])
+        df['interest'] = df['OBS_VALUE'].astype(float)
+        df = df[["period", "fixed_period", "interest"]]         
         df = df.set_index("period")
         df.sort_values(["period", "fixed_period"], inplace=True)
         self.df = df

@@ -26,6 +26,9 @@ class ECBData:
         """
         self._start_date_ = start_date
         self._end_date_ = end_date
+        if not self.df.empty:
+            self.df = self.df.loc[start_date:end_date]
+            
 
     def get_period(self) -> tuple[datetime, datetime]:
         """Get start and end date from the actual data loaded"""

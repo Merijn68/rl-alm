@@ -3,10 +3,13 @@ import pandas as pd
 import numpy as np
 import matplotlib as mpl
 from matplotlib import pyplot as plt
+from matplotlib.lines import Line2D
 import seaborn as sns
 from pathlib import Path
 from typing import Tuple
 from datetime import datetime, timedelta
+from dateutil.relativedelta import relativedelta
+from scipy import interpolate
 
 from src.data.definitions import FIGURES_PATH
 
@@ -172,35 +175,26 @@ def situational_plot(
 
 def plot_rewards(
     episode_rewards,
-    episode_nii,
-    episode_risk_penalty,
-    episode_liquidity_penalty,
+    interpolate_line=True,
+    interpolate_points=100,
     figsize: Tuple[int, int] = FIGSIZE,
     name: str = "rewards",
     figurepath: Path = Path(FIGURES_PATH),
-) -> plt.Axes:
+):
+    """plot episode rewards"""
+    plt.figure(figsize=figsize)
     plt.title(f"Rewards for {len(episode_rewards)} episodes")
     plt.xlabel("Episode")
     plt.ylabel("Reward")
     plt.xlim([0, len(episode_rewards)])
-    all_range = np.concatenate(
-        [
-            episode_rewards,
-            episode_nii,
-            episode_risk_penalty,
-            episode_liquidity_penalty,
-        ]
-    )
-    plt.ylim(
-        [
-            min(all_range),
-            max(all_range),
-        ]
-    )
-    plt.plot(np.array(episode_rewards), label="Reward", color="red")
-    plt.plot(np.array(episode_nii), label="NII", color="blue")
-    plt.plot(np.array(episode_risk_penalty), label="Risk Penalty", color="green")
-    plt.plot(np.array(episode_liquidity_penalty), label="Liquidity", color="orange")
+    plt.plot(np.array(episode_rewards), label="Original Reward", color="red")
+
+    if interpolate_line:
+        x = np.arange(len(episode_rewards))
+        bspline = interpolate.make_interp_spline(x, episode_rewards)
+        x_new = np.linspace(0, len(episode_rewards) - 1, interpolate_points)
+        y_new = bspline(x_new)
+        plt.plot(x_new, y_new, label="Reward", color="blue")
     plt.legend()
     plt.show()
 
@@ -322,51 +316,59 @@ def curveplot(
 
     data_steps = np.arange(
         start_date,
-        start_date + np.timedelta64(num_data_steps, "M"),
+        start_date + relativedelta(months=num_data_steps),
         dtype="datetime64[M]",
     )
     sim_steps = np.arange(
-        start_date + np.timedelta64(num_data_steps, "M"),
-        start_date + np.timedelta64(num_steps, "M"),
+        start_date + relativedelta(months=num_data_steps),
+        start_date + relativedelta(months=num_steps),
         dtype="datetime64[M]",
     )
     if num_sim_steps > len(sim_steps):  # This may vary with leap years
-        sim_steps = np.append(sim_steps, sim_steps[-1] + np.timedelta64(1, "M"))
+        sim_steps = np.append(sim_steps, sim_steps[-1] + relativedelta(months=1))
 
     plt.figure(figsize=figsize)
 
-    for idx, tenor in enumerate(SWAP_TENORS):
-        plt.plot(data_steps, curve_data[idx, :], linestyle="-", lw=0.5, color="black")
+    for idx, _ in enumerate(SWAP_TENORS):
+        alpha = (idx + 1) / len(SWAP_TENORS)
+        plt.plot(
+            data_steps,
+            curve_data[idx, :],
+            linestyle="-",
+            lw=0.8,
+            color="black",
+            alpha=alpha,
+        )
 
-    for idx, tenor in enumerate(SWAP_TENORS):
+    for idx, _ in enumerate(SWAP_TENORS):
+        alpha = (idx + 1) / len(SWAP_TENORS)
         plt.plot(
             sim_steps,
             sim_data[idx, :],
             linestyle="-",
-            lw=0.5,
+            lw=0.8,
             color="red",
+            alpha=alpha,
         )
-    for idx, tenor in enumerate(BANK_RATE_TENORS):
+    for idx, _ in enumerate(BANK_RATE_TENORS):
         plt.plot(
             data_steps,
             curve_data[idx + len(SWAP_TENORS), :],
             linestyle="-",
             color="blue",
-            lw=0.5,
+            lw=0.8,
         )
-    for idx, tenor in enumerate(BANK_RATE_TENORS):
+    for idx, _ in enumerate(BANK_RATE_TENORS):
         plt.plot(
             sim_steps,
             sim_data[idx + len(SWAP_TENORS), :],
             linestyle="-",
-            lw=0.5,
+            lw=0.8,
             color="green",
         )
 
     plt.xlabel("Time")
     plt.ylabel("Interest Rate")
-
-    from matplotlib.lines import Line2D
 
     custom_lines = [
         Line2D([0], [0], color="black", linestyle="-", lw=0.5),

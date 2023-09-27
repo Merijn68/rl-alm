@@ -1,11 +1,9 @@
 import pandas as pd
 import numpy as np
-from pandas.tseries.offsets import DateOffset
 from pandas.tseries.offsets import BDay
 from loguru import logger
 from datetime import datetime
 from src.visualization import visualize
-from src.models import predict
 from src.data.definitions import DATA_RAW
 from src.data import dataset
 

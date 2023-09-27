@@ -1,599 +1,399 @@
-# Bank Assets
-import pandas as pd
+# Simplified bank model
 import numpy as np
-import datetime
-import warnings
+
+from random import randint, randrange
 from loguru import logger
+from typing import Tuple
+
+import matplotlib.pyplot as plt
+from datetime import datetime, timedelta
 from pandas.tseries.offsets import BDay
-from pandas.tseries.offsets import DateOffset
-from datetime import timedelta
-from random import randrange
+import sys
+from pathlib import Path
 
-from dateutil.relativedelta import relativedelta
-from src.visualization import visualize
-from src.data.zerocurve import Zerocurve
+ROOT_DIR = Path(__file__).parents[2].absolute()
+sys.path.append(str(ROOT_DIR))
+
 from src.data.interest import Interest
+from src.data.zerocurve import Zerocurve
+from src.models.hullwhite import HullWhiteModel
+from src.models.action_space import ActionSpace
 
-
-MARGIN = 0.015  # fixed margin payed for IRS swaps
-FLOAT_FREQ_PER_YEAR = 2  # Frequency of interest rate payments for IRS swaps per year
-DAYS_OFFSET = BDay(0)  # Date offset from deal date to first settlement date
+RANGE_TENOR = [1, 5, 10, 20]  # Duration of fixed interest mortgages in years
+FUNDING_TENORS = [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    12,
+    15,
+    20,
+    25,
+]  # Expiriment with different funding tenors
+RANGE_PROBABILITIES = [
+    0.08,
+    0.19,
+    0.23,
+    0.50,
+]  # Probabilities of selling mortgages with different durations
+MORTGAGE_AMOUNT = 1000
+BOND_AMOUNT = 1000
+MORTGAGE_SIZE = 120
+COLUMN_DATA = [
+    ("tenor", int),
+    ("start_date", "datetime64[D]"),
+    ("maturity_date", "datetime64[D]"),
+    ("principal", int),
+    ("interest", float),
+    ("period", "datetime64[Y]"),
+]
 
 
 class Bankmodel:
-    """Cashflow model of a bank"""
+    def __init__(self) -> None:
+        # Read interest data
+        self.interest = Interest()
+        self.interest.read_data()
 
-    def __init__(self):
+        # match data periods for interest and zerocurve
+        start_date, end_date = self.interest.get_period()
         self.zerocurve = Zerocurve()
+        self.zerocurve.set_period(start_date, end_date)
+        # read zerocurve data
         self.zerocurve.read_data()
-        self.pos_date = self.zerocurve.df.index[-1] - BDay(2)
-        self.origin_pos_date = self.pos_date
-        self.df_cashflows = pd.DataFrame()
-        self.df_mortgages = pd.DataFrame()
-        self.df_swaps = pd.DataFrame()
-        self.nmd_pricipal = 0
-        self.nmd_core = 1
-        self.nmd_maturity = 0
+        start_date, end_date = self.zerocurve.get_period()
+        self.interest.set_period(start_date, end_date)
 
-        interest = Interest()
-        interest.read_data()
-        self.df_interest = interest.df
+        print("Interest period: ", self.interest.get_period())
+        print("Zerocurve period: ", self.zerocurve.get_period())
+
+        # fit the Hull-White model to simulate interest rates
+        self.hullwhite = HullWhiteModel()
+        self.hullwhite.fit(self.interest, self.zerocurve)
+        self.hullwhite.transform()
+
+        # initialize the remaining fields for the bank model
+        self.pos_date = end_date.to_numpy()
+        self.timestep = 0
+        self.liquidity = 0
+        self.risk_limit = 5 * MORTGAGE_AMOUNT
+        self.sa_mortgages = None
+        self.sa_funding = None
+        self.funding_tenors = FUNDING_TENORS
+        self.num_actions = len(FUNDING_TENORS)
 
     def _random_date_(self, start: datetime, end: datetime) -> datetime:
         """return a random business date between start and end date"""
         delta = end - start
-        date = start + datetime.timedelta(days=randrange(delta.days))
+        date = start + timedelta(days=randrange(delta.days))
         # shift dates to next business day if closed
         if date.weekday() >= 5:
             date = date + BDay(1)
             date = date.to_pydatetime()
         return date
 
-    def _date_schedule_(
-        self, start_date: str, n_periods: int, offset: str = "months"
-    ) -> np.array:
-        """Generate monthly payment dates schedule"""
-        # create a date range with monthly frequency starting at start_date
-        offset = offset.lower()
-        if offset == "months":
-            freq = DateOffset(months=1)
-        elif offset == "semi annual":
-            freq = DateOffset(months=6)
-        else:
-            freq = DateOffset(years=1)
-
-        dates = pd.date_range(start=start_date, periods=n_periods, freq=freq)
-        # shift dates to next business day if closed
-        dates = dates.map(lambda x: x + BDay(1) if x.weekday() >= 5 else x)
-        return dates
-
-    def _generate_mortgage_cashflow_(self, principal, interest_rate, years, periods):
-        n = years * 12  # number of mortgage payments in total
-        principal_payment = round(principal / n)  # monthly principal payment
-        r = interest_rate / 12  # monthly interest rate
-        cashflow = []
-        cashflow.append((0, -principal, "principal"))
-        for i in range(0, periods):
-            interest_paid = round(principal * r, 0)
-            if i == periods:
-                principal_payment = principal
-            principal = principal - principal_payment
-            cashflow.append((i, interest_paid, "interest"))
-            cashflow.append((i, principal_payment, "principal"))
-        cashflow_df = pd.DataFrame(
-            cashflow, columns=["period", "cashflow", "cashflow_type"]
-        )
-        return cashflow_df
-
-    def _generate_mortgage_cashflows_(self, contracts: pd.DataFrame) -> pd.DataFrame:
-        mortgage_tenor = 30
-        dfs = []
-        for _, row in contracts.iterrows():
-            periods = row.years * 12
-            df_cashflows = self._generate_mortgage_cashflow_(
-                row.principal, row.interest / 100, mortgage_tenor, periods
-            )
-            schedule = self._date_schedule_(row.start_date, periods, offset="months")
-            df_cashflows["value_dt"] = df_cashflows["period"].map(
-                dict(enumerate(schedule))
-            )
-            df_cashflows["contract_no"] = row.contract_no
-            df_cashflows["type"] = "mortgage"
-            df_cashflows["rate_type"] = "fixed"
-            dfs.append(df_cashflows)
-        df_all = pd.concat([dfs[i] for i in range(len(contracts))], axis=0)
-        return df_all
-
-    def generate_mortgage_contracts(self, n: int, amount: float = 100000):
-        """Generate a portfolio of mortgages"""
-        # Generate mortgage portfolio of n mortgages, active at pos_date
-        # probability of 10 years contracts is 10x higher then 1 year contract
-        # as they can start 10 years before.
-        # Devision in fixed interest period is dependend on the coupon rates
-
-        category = np.random.choice(a=[0, 1, 2, 3], size=n, p=[0.03, 0.14, 0.23, 0.60])
-        df = pd.DataFrame()
-        df["category"] = category
-        d = {0: "<= 1 year", 1: "1>5 years", 2: "5>10 years", 3: ">10 years"}
-        df["fixed_period"] = df["category"].map(d).astype("category")
-        df["fixed_period"].cat.set_categories(
-            ["<= 1 year", "1>5 years", "5>10 years", ">10 years"], ordered=True
-        )
-        df["years"] = df["category"].map({0: 1, 1: 5, 2: 10, 3: 20})
-        df["start_date"] = df.apply(
-            lambda row: self._random_date_(
-                self.pos_date - relativedelta(years=row.years), self.pos_date
-            ),
-            axis=1,
-        )
-        df["principal"] = amount
-        df["period"] = (
-            df["start_date"].to_numpy().astype("datetime64[M]")
-        )  # trick to get 1th of the month
-        df = df.merge(
-            self.df_interest.reset_index(), how="left", on=["period", "fixed_period"]
-        )
-        df["interest"] = df["interest"].fillna(
-            self.df_interest["interest"].iloc[-1]
-        )  # fill missing values with last coupon rate - not a nice solution
-        df["contract_no"] = np.arange(len(df))  # assign a contract id
-
-        self.df_mortgages = pd.concat([self.df_mortgages, df])
-        logger.info(f"Added {len(df)} mortgages to our portfolio.")
-
-        df_cashflows = self._generate_mortgage_cashflows_(df)
-        self.df_cashflows = pd.concat([self.df_cashflows, df_cashflows])
-        logger.info(f"Added {len(df_cashflows)} cashflows to our model.")
-
-        return df
-
-    def _generate_swap_cashflows_leg(self, swap, fixed_float, leg, freq):
-        """Generate the cashflows for one leg of the swap"""
-        tenor = swap.loc[0, "tenor"]
-        contract_no = swap.loc[0, "contract_no"]
-        start_date = swap.loc[0, "start_date"]
-        principal = swap.loc[0, "principal"]
-        base_rate = swap.loc[0, "base_rate"]
-        margin = swap.loc[0, "margin"]
-        freq_per_year = get_freq_per_year(freq)
-        periods = int(freq_per_year * (tenor / 12))
-        cashflow = []
-        rate = None
-        interest = None
-        for i in range(0, periods):
-            if fixed_float == "fixed":
-                rate = (base_rate + margin) / freq_per_year
-                interest = round((principal * rate / 100 * leg) / freq_per_year, 0)
-            cashflow.append((i, interest, "interest"))
-        df = pd.DataFrame(cashflow, columns=["period", "cashflow", "cashflow_type"])
-        df["rate_type"] = fixed_float
-        df["fixed_rate"] = rate
-        df["leg"] = leg
-        first_payment_date = start_date + pd.DateOffset(months=12 / freq_per_year)
-        schedule = self._date_schedule_(first_payment_date, periods, offset=freq)
-        df["value_dt"] = df["period"].map(dict(enumerate(schedule)))
-        schedule = self._date_schedule_(start_date, periods, offset=freq)
-        df["rateset_dt"] = pd.to_datetime(
-            np.where(
-                df["rate_type"] == "float",
-                df["period"].map(dict(enumerate(schedule))),
-                None,
-            )
-        )
-        df["contract_no"] = contract_no
-        df["type"] = "swap"
-        df["principal"] = principal
-        return df
-
-    def _generate_swap_cashflows_(self, swap: pd.DataFrame) -> pd.DataFrame:
-        """Generate cashflows for an interest rate swap"""
-
-        pay = swap.loc[0, "pay"]
-        rec = swap.loc[0, "rec"]
-        pay_freq = swap.loc[0, "pay_freq"]
-        rec_freq = swap.loc[0, "rec_freq"]
-        PAY_LEG = -1
-        REC_LEG = 1
-
-        # Calculate Theoretical swap price
-        # To calculate the swap price, I assume that all floaters are 6m and all fixed rates annual.
-        # Thus - taking every second row of the floating discount factors gives me the fixed leg discount factors.
-        if pay == "float":
-            df_float = self._generate_swap_cashflows_leg(swap, pay, PAY_LEG, pay_freq)
-        else:
-            df_float = self._generate_swap_cashflows_leg(swap, rec, REC_LEG, rec_freq)
-        df_npv = self.calculate_npv(df_float, self.pos_date)
-        df_annualized = df_npv[1::2].copy()
-        avg_df = df_annualized["df"].mean()
-        swap.base_rate = abs(
-            df_npv["npv"].sum()
-            / avg_df
-            / len(df_annualized.index)
-            / swap["principal"]
-            * 100
-        )
-
-        df_cashflows = pd.DataFrame()
-        df_pay = self._generate_swap_cashflows_leg(swap, pay, PAY_LEG, pay_freq)
-        df_rec = self._generate_swap_cashflows_leg(swap, rec, REC_LEG, rec_freq)
-        df_cashflows = pd.concat([df_pay, df_rec])
-
-        return df_cashflows
-
-    def generate_swap_contract(
+    def generate_mortgage_contracts(
         self,
-        buysell: str,
-        tenor: int,
-        amount: float = 100000,
-        base_rate: float = 0,
-        margin: float = MARGIN,
+        n: int = MORTGAGE_SIZE,
+        amount: float = MORTGAGE_AMOUNT,
+        probabilities=RANGE_PROBABILITIES,
     ):
-        """Generate a Interest Rate Swap contract"""
-        CONTRACT_NO_OFFSET = 10000
-        buysell = buysell.lower()
-        contract_no = len(self.df_swaps) + 1 + CONTRACT_NO_OFFSET
-        start_date = self.pos_date + DAYS_OFFSET
-        if buysell == "buy":
-            pay = "fixed"
-            pay_freq = "annual"
-            rec = "float"
-            rec_freq = "semi annual"
-        else:
-            pay = "float"
-            pay_freq = "semi annual"
-            rec = "fixed"
-            rec_freq = "annual"
-            margin = -abs(margin)
-        end_date = start_date + pd.DateOffset(months=tenor)
-        if end_date.weekday() >= 5:
-            end_date = end_date + BDay(1)
-            end_date = end_date.to_pydatetime()
-        swap = pd.DataFrame(
-            [
-                {
-                    "contract_no": contract_no,
-                    "pay": pay,
-                    "start_date": start_date,
-                    "pay_freq": pay_freq,
-                    "rec": rec,
-                    "rec_freq": rec_freq,
-                    "principal": amount,
-                    "tenor": tenor,
-                    "base_rate": base_rate,
-                    "margin": margin,
-                }
-            ]
-        )
-        df_cashflows = self._generate_swap_cashflows_(swap)
-        self.df_swaps = pd.concat([self.df_swaps, swap])
-        # self.df_swaps.to_excel("df_swaps.xlsx")
-        self.df_cashflows = pd.concat([self.df_cashflows, df_cashflows])
+        """Generate mortgage contracts for a specific period"""
 
-    def clear_swap_contracts(self):
-        if len(self.df_cashflows.index):
-            self.df_cashflows = self.df_cashflows[self.df_cashflows["type"] != "swap"]
-        self.df_swaps.drop(self.df_swaps.index, inplace=True)
-
-    def fixing_interest_rate_swaps(self):
-        """Fixing the floating rate leg of the interest rate swap contracts"""
-        start_date = self.pos_date
-        df = self.df_cashflows
-        df_float_cflows = df[
-            (df["type"] == "swap")
-            & (df["rate_type"] == "float")
-            & (df["rateset_dt"] <= start_date)
-            & (df["cashflow"].isna())
-        ]
-        forward_curve = self.zerocurve.interpolate(start_date)
-        df_float_calculation = df_float_cflows.merge(
-            forward_curve, left_on="value_dt", right_on=forward_curve.index, how="left"
-        )
-        df_float_calculation["cashflow"] = round(
-            (
-                df_float_calculation["principal"]
-                * df_float_calculation["rate"]
-                / 100
-                * df_float_calculation["leg"]
-            )
-            / FLOAT_FREQ_PER_YEAR,
-            0,
-        )
-        # Update the floating rate cashflows with the calculated cashflows
-        df.loc[
-            (df["type"] == "swap")
-            & (df["rate_type"] == "float")
-            & (df["rateset_dt"] <= start_date)
-            & (df["cashflow"].isna()),
-            "cashflow",
-        ] = df_float_calculation["cashflow"]
-
-    def generate_nonmaturing_deposits(
-        self, principal: float = 1000000, core: float = 0.4, maturity: int = 54
-    ) -> pd.DataFrame:
-        """Generate Non Maturing Deposits (e.g. bank and saving accounts )"""
-        self.nmd_pricipal = principal
-        self.nmd_core = core
-        self.nmd_maturity = maturity
-        noncore = 1 - core
-        cashflow = []
-        cashflow.append((1, round(-principal * noncore), "principal"))
-        cashflow.append((2, round(-principal * core), "principal"))
-        df_cashflows = pd.DataFrame(
-            cashflow, columns=["period", "cashflow", "cashflow_type"]
-        )
-        df_cashflows["value_dt"] = [
-            # self.pos_date,
-            self.pos_date + BDay(1),
-            self.pos_date + DateOffset(months=maturity),
-        ]
-        df_cashflows["type"] = "deposits"
-        df_cashflows["rate_type"] = "fixed"
-        df_cashflows["contract_no"] = 0
-        self.df_cashflows = pd.concat([self.df_cashflows, df_cashflows])
-        return df_cashflows
-
-    def step_nmd(self):
-        """Roll the bank accounts and customer accounts 1 timestep forward"""
-        self.df_cashflows = self.df_cashflows[self.df_cashflows["type"] != "deposits"]
-        self.generate_nonmaturing_deposits(
-            self.nmd_pricipal, self.nmd_core, self.nmd_maturity
-        )
-
-    def generate_funding(
-        self, principal: float = 1000000, rate: float = 1, maturity: int = 120
-    ) -> pd.DataFrame:
-        """Add Capital Markets Funding"""
-        # Calculate funding
-        r = rate / 100
-        interest_paid = round(-principal * r, 0)
-        periods = int(round(maturity / 12, 0))
-        cashflow = []
-        cashflow.append((0, principal, "principal"))
-        for i in range(0, periods):
-            if i == periods:
-                cashflow.append((i, -principal, "principal"))
-            cashflow.append((i, interest_paid, "interest"))
-        schedule = self._date_schedule_(self.pos_date, periods, offset="years")
-        # Generate the cashflows for the funding
-        df_cashflows = pd.DataFrame(
-            cashflow, columns=["period", "cashflow", "cashflow_type"]
-        )
-        df_cashflows["value_dt"] = df_cashflows["period"].map(dict(enumerate(schedule)))
-        df_cashflows["type"] = "Funding"
-        df_cashflows["rate_type"] = "fixed"
-        df_cashflows["contract_no"] = 0
-        # Add cashflows to self.df_cashflows
-        self.df_cashflows = pd.concat([self.df_cashflows, df_cashflows])
-        logger.info(f"Added {principal} amount in capital market funding to our model.")
-        return df_cashflows
-
-    def reset(self):
-        """Reset the model to the original state for each episode"""
-        self.pos_date = self.origin_pos_date
-        self.zerocurve.reset()
-
-    def calculate_npv(self, df_cashflows, pos_date: datetime) -> pd.DataFrame:
-        """Calculate the PV of a series of cashflows given the zero curve"""
-        if pos_date == None:
-            pos_date = self.pos_date
-        df_forward = self.zerocurve.interpolate(pos_date)
-        if df_forward.empty:
-            logger.error("Zerocurve not found for date {pos_date}")
-            return 0
-        if df_cashflows.empty:
-            logger.warning("No cashflows setup for model.")
-            return 0
-        df_c = df_cashflows[
-            df_cashflows["value_dt"] > pos_date
-        ]  # only include future cashflows
-        if df_c.empty:
-            logger.warning("No future cashflows at {pos_date}")
-            return 0
-        df_npv = df_c.merge(
-            df_forward, left_on="value_dt", right_on=df_forward.index, how="left"
-        )
-        df_npv["rate"] = df_npv["rate"].ffill()
-
-        # Something strange here with pandas. It still gives me this warning even though I don't use iloc
-        warnings.filterwarnings("ignore", "In a future version")
-
-        # project future cashflows for floating leg swaps
-        mask = (
-            (df_npv["type"] == "swap")
-            & (df_npv["rate_type"] == "float")
-            & (df_npv["cashflow"].isna())
-        )
-
-        if "principal" in df_npv.columns:
-            df_npv.loc[mask, "cashflow"] = (
-                (
-                    df_npv.loc[mask, "principal"]
-                    * df_npv.loc[mask, "rate"]
-                    / 100
-                    * df_npv.loc[mask, "leg"]
-                )
-                / FLOAT_FREQ_PER_YEAR
-            ).round(0)
-
-        warnings.filterwarnings("default", "In a future version")
-
-        df_npv["pos_dt"] = pos_date
-        df_npv["year_frac"] = round(
-            (df_npv["value_dt"] - df_npv["pos_dt"]) / timedelta(365, 0, 0, 0), 5
-        )
-        df_npv["df"] = 1 / (1 + df_npv["rate"] / 100) ** df_npv["year_frac"]
-        # discount cashflows to pos_date
-        df_npv["npv"] = round(df_npv["cashflow"] * df_npv["df"], 2)
-
-        return df_npv
-
-    def calculate_nii(self, dt=1) -> float:
-        # substraction of the interst expense - interest income
-        df = self.df_cashflows
-        df = df[
-            (df["value_dt"] >= self.origin_pos_date)
-            & (df["value_dt"] < self.pos_date)
-            & (df["cashflow_type"] == "interest")
-        ]
-        return df["cashflow"].sum()
-
-    def calculate_risk(self, shock: int = 1, direction: str = "parallel"):
-        """Calculate a parallel shift, short shift or long shift in the zero curve"""
-        pos_date = self.pos_date
-        df_date = self.zerocurve.df.loc[pos_date].copy()
-        df_date = df_date.set_index("value_dt")
-        direction = direction.lower()
-        if direction == "parallel":
-            df_date["shock"] = shock / 100
-        elif direction == "short":
-            df_date["shock"] = 0
-            df_date.loc[df_date["tenor"] <= 18, "shock"] = shock / 100
-        elif direction == "long":
-            df_date["shock"] = 0
-            df_date.loc[df_date["tenor"] > 18, "shock"] = shock / 100
-        else:
-            logger.error(f"Unknown value for parameter {direction}.")
-            df_date["shock"] = 0
-        df_date["shock"] += df_date["rate"]
-        df_forward = df_date[["shock", "rate"]].resample("D").mean()
-        df_forward["shock"] = df_forward["shock"].interpolate()
-        df_forward["rate"] = df_forward["rate"].interpolate()
-
-        df = self.df_cashflows
-        df_c = df[df["value_dt"] > self.pos_date]  # Only include future cashflows
-        df_returns = df_c.merge(
-            df_forward, left_on="value_dt", right_on=df_forward.index
-        )
-        df_returns["pos_dt"] = pos_date
-        df_returns["year_frac"] = round(
-            (df_returns["value_dt"] - df_returns["pos_dt"]) / timedelta(365, 0, 0, 0), 5
-        )
-        df_returns["df_npv"] = (
-            1 / (1 + df_returns["rate"] / 100) ** df_returns["year_frac"]
-        )
-        df_returns["df_shock"] = (
-            1 / (1 + df_returns["shock"] / 100) ** df_returns["year_frac"]
-        )
-        df_returns["npv"] = round(df_returns["cashflow"] * df_returns["df_npv"], 2)
-        df_returns["npv_shock"] = round(
-            df_returns["cashflow"] * df_returns["df_shock"], 2
-        )
-        return sum(df_returns["npv_shock"] - df_returns["npv"])
-
-    def calculate_bpv(self, shock: int = 1) -> pd.DataFrame:
-        """Calculate BPV profile, applying the shock to each tenor and calculate the impact"""
-
-        pos_date = self.pos_date
-        shock = 1 / 100
-        # Current zero curve
-        df_zerocurve_date = self.zerocurve.df.loc[pos_date]
-        # Bin cashflows per tenor
-        bins = [
-            pos_date + pd.offsets.DateOffset(months=item)
-            for item in self.zerocurve.df.loc[pos_date].tenor.to_list()
-        ]
-        if self.df_cashflows["value_dt"].max() > bins[-1]:
-            bins[-1] = self.df_cashflows["value_dt"].max()
-        cats = self.zerocurve.df.loc[pos_date].tenor.to_list()[
-            1:
-        ]  # list(range(1, len(bins)))
-        df = self.df_cashflows
-        df["tenor"] = pd.cut(df["value_dt"], bins, labels=cats, right=False)
-        df = df[df["value_dt"] > pos_date]
-        df = df[["tenor", "cashflow"]].groupby("tenor").sum("cashflow")
-
-        # Cashflows to numpy
-        cashflow = df["cashflow"].to_numpy().reshape(-1, 1)
-        # add row for tenor = 0, cashflows at T0 are not included in the cashflow list
-        cashflow = np.r_[np.zeros((1, 1)), cashflow]
-        # Reshape tenor to year fraction
-        t = (df_zerocurve_date["tenor"] / 12).to_numpy().reshape(-1, 1)
-        # Zerocurve to numpy
-        rates = df_zerocurve_date["rate"].to_numpy()
-        # shock rates up and down per tenor point and add as seperate columns
-        shock_range = [shock]
-        shocks = np.zeros((len(rates), len(rates) * len(shock_range)))
-        for s in shock_range:
-            for i in range(len(rates)):
-                shocks[:, i + shock_range.index(s) * len(rates)] = rates
-                shocks[i, i + shock_range.index(s) * len(rates)] = rates[i] + s
-        # Reshape rates to concat with shocks
-        rates = rates.reshape(len(rates), 1)
-        # add shocks to rates
-        rates = np.concatenate((rates, shocks), axis=1)
-        # calculate discount factor for all rates (including shocked rates)
-        discount_factor = (1 / (1 + rates / 100)) ** t
-        # calculate the npv for all cashflows under all scenarios
-        npv = discount_factor * cashflow
-        positive = npv[:, 1 : len(rates) + 1]
-        # negative = npv[:, len(rates) + 1 :]
-        result = np.sum(
-            np.round(positive - npv[:, 0].reshape(-1, 1), 0),
-            axis=0,
-        ).reshape(
-            -1, 1
-        )  # np.minimum(positive, negative)
-        df_result = pd.DataFrame(result)
-        df_result["tenor"] = df_zerocurve_date["tenor"].to_list()
-        df_result.set_index("tenor", inplace=True)
-        df_result.columns = ["dv01"]
-        return df_result
-
-    def plot_contracts(self):
-        """Simple stacked barplot of outstanding contracts"""
-        df = self.df_mortgages
-        if len(df):
-            return (
-                df.sort_values(["start_date", "fixed_period"])
-                .pivot_table(
-                    index=df["start_date"].dt.year,
-                    columns=["fixed_period"],
-                    values="principal",
-                    aggfunc="count",
-                    sort=False,
-                )
-                .plot(kind="bar", stacked=True)
-            )
-        else:
+        """ If we can't fund the mortgages - we can not sell more mortgages """
+        if self.liquidity < n * amount:
             return
 
-    def plot_cashflows(self):
-        """Simple plot of outstanding cashflows from position date"""
-        # Cut off all cashflows prior to position date
-        df = self.df_cashflows
-        df_c = df[df["value_dt"] > self.pos_date]
-        df_show = df_c[["cashflow"]].groupby(df_c["value_dt"].dt.strftime("%Y")).sum()
-        df_show["cashflow"] = df_show["cashflow"] / 1000
-        ax = visualize.barplot(
-            df_show,
-            x=df_show.index,
-            y="cashflow",
-            x_label="year",
-            y_label="amount (x 1000)",
-            title="sum of cashflows per year",
+        # We use structured arrays to store the data - as dataframes are too slow
+        dtypes = COLUMN_DATA
+        data = np.empty(n, dtype=dtypes)
+        data["tenor"] = np.random.choice(RANGE_TENOR, size=n, p=probabilities)
+        data["start_date"] = np.full(n, self.pos_date)
+        # delta = np.array(
+        #    [timedelta(days=365 * int(y)) for y in data["tenor"]],
+        #    dtype="timedelta64[D]",
+        # )
+        delta = np.timedelta64(365, "D") * data["tenor"]
+        data["maturity_date"] = data["start_date"] + delta
+        data["principal"] = np.ones(n) * amount
+        data["period"] = np.array([np.datetime64(dt, "Y") for dt in data["start_date"]])
+        data["interest"] = np.array(
+            [
+                self.get_sim_interest_rate(self.timestep, tenor)
+                for tenor in data["tenor"]
+            ]
         )
-        # using format string '{:.0f}' here but you can choose others
-        ax.set_yticks(ax.get_yticks())
-        ax.set_yticklabels(["{:0.0f}".format(x) for x in ax.get_yticks().tolist()])
+        self.liquidity -= n * amount
+        if self.sa_mortgages is None:
+            self.sa_mortgages = data
+        else:
+            self.sa_mortgages = np.concatenate((self.sa_mortgages, data))
 
-    def step(self, dt=1):
-        self.pos_date = self.pos_date + BDay(dt)
-        self.step_nmd()
-        self.zerocurve.step(dt)
+    def get_sim_interest_rate(self, timestep, tenor):
+        """Get interest rate for a specific start date and tenor"""
+        x = RANGE_TENOR.index(tenor)
+        rate = self.hullwhite.get_simulated_interest_rates(timestep)[x, 0]
+        return rate
 
-    def apply_action(self, buy_or_sell, tenor, amount):
-        self.generate_swap_contract(buy_or_sell, tenor, amount)
+    def get_sim_zero_rate(self, timestep, tenor):
+        """Get zero rate for a specific start date and tenor"""
+        rates = self.hullwhite.get_simulated_zero_rates(timestep)[:, 0]
+        tenor_per_month = tenor * 12
+
+        TENORS = {
+            "ON": 0,
+            "IF_3M": 3,
+            "IF_6M": 6,
+            "IF_9M": 9,
+            "IF_1Y": 12,
+            "IF_1Y3M": 15,
+            "IF_1Y6M": 18,
+            "IF_2Y": 24,
+            "IF_3Y": 36,
+            "IF_4Y": 48,
+            "IF_5Y": 60,
+            "IF_7Y": 84,
+            "IF_10Y": 120,
+            "IF_15Y": 180,
+            "IF_30Y": 360,
+        }
+
+        # Extract the tenor values from the TENORS dictionary
+        tenor_values = np.array(list(TENORS.values()))
+
+        # Linearly interpolate the rate using numpy's interp function
+        interpolated_rate = np.interp(tenor_per_month, tenor_values, rates)
+
+        return interpolated_rate
+
+    def buy_sell_bond(self, buy_sell, principal: float = BOND_AMOUNT, tenor: int = 5):
+        """Add Capital Markets Funding"""
+        dtypes = COLUMN_DATA
+        data = np.empty(1, dtype=dtypes)
+        data["tenor"] = tenor
+        data["start_date"] = self.pos_date
+        delta = np.array(
+            [timedelta(days=365 * int(y)) for y in data["tenor"]],
+            dtype="timedelta64[D]",
+        )
+        data["maturity_date"] = data["start_date"] + delta
+        data["principal"] = principal * buy_sell * -1
+        data["period"] = np.array([np.datetime64(dt, "Y") for dt in data["start_date"]])
+        data["interest"] = np.array(
+            [self.get_sim_zero_rate(self.timestep, tenor) for tenor in data["tenor"]]
+        )
+
+        # add to liquidity
+        self.liquidity += principal * buy_sell
+
+        if self.sa_funding is None:
+            self.sa_funding = data
+        else:
+            self.sa_funding = np.concatenate((self.sa_funding, data))
+
+    def step(self, actions=None, timestep=None) -> None:
+        """Each step we fund a time bucket or not.
+        We asume we can not repay the funding before maturity."""
+        if timestep is not None:
+            self.timestep = timestep
+
+        from_date = self.pos_date
+        self.pos_date = np.datetime64(
+            self.pos_date.astype("datetime64[M]") + np.timedelta64(1, "M")
+        )
+        if actions is not None:
+            tenor = 0
+            for action in actions:
+                if action == 0:
+                    pass
+                else:
+                    self.buy_sell_bond(buy_sell=action, tenor=FUNDING_TENORS[tenor])
+                tenor += 1
+
+        # receive payments from mortgages
+        if self.sa_mortgages is not None:
+            self.liquidity += np.where(
+                (self.sa_mortgages["maturity_date"] >= from_date)
+                & (self.sa_mortgages["maturity_date"] < self.pos_date),
+                self.sa_mortgages["principal"],
+                0,
+            ).sum()
+        # pay back funding
+        if self.sa_funding is not None:
+            self.liquidity += np.where(
+                (self.sa_funding["maturity_date"] >= from_date)
+                & (self.sa_funding["maturity_date"] < self.pos_date),
+                self.sa_funding["principal"],
+                0,
+            ).sum()
+
+        self.generate_mortgage_contracts(
+            int(
+                (MORTGAGE_SIZE + randint(-MORTGAGE_SIZE * 0.1, MORTGAGE_SIZE * 0.1))
+                / 12
+            )
+        )
+        self.timestep = self.timestep + 1
+
+    def calculate_nii(self) -> Tuple[float, float, float]:
+        """Calculate the Net Interest Income per period"""
+
+        income = 0
+        funding_cost = 0
+
+        if self.sa_mortgages is not None:
+            filter = self.sa_mortgages["maturity_date"] >= self.pos_date
+            mortgages = self.sa_mortgages[filter]
+            income = ((mortgages["interest"] / 100) * mortgages["principal"] / 12).sum()
+
+        if self.sa_funding is not None:
+            filter = self.sa_funding["maturity_date"] >= self.pos_date
+            funding = self.sa_funding[filter]
+            funding_cost = (
+                (funding["interest"] / 100) * funding["principal"] / 12
+            ).sum()
+
+            if funding_cost > 0:
+                print("What is going on here?")
+                print(f"funding_cost = {funding_cost}")
+                print(self.sa_funding)
+
+        nii = income + funding_cost
+        return nii, income, funding_cost
+
+    def calculate_cashflows(self, type: str = "all") -> np.ndarray:
+        """Calculate the future principal cashflows from mortgages and funding"""
+
+        # Create cashflow_data array
+        projected_years = 31  # added 1 for the current year
+        pos_date = np.datetime64(self.pos_date)
+        end_date = np.datetime64(
+            pos_date.astype("datetime64[Y]") + np.timedelta64(projected_years, "Y")
+        )
+        dtype = [("year", "datetime64[Y]"), ("cashflow", int)]
+        cashflow_data = np.zeros(projected_years, dtype=dtype)
+        cashflow_data["year"] = np.arange(pos_date, end_date, dtype="datetime64[Y]")
+
+        if type not in ["mortgages", "funding", "all"]:
+            raise ValueError("type must be mortgages, funding or all")
+        if type == "mortgages":
+            if self.sa_mortgages is None:
+                return cashflow_data
+            data = self.sa_mortgages
+        elif type == "funding":
+            if self.sa_funding is None:
+                return cashflow_data
+            data = self.sa_funding
+        else:
+            if self.sa_funding is None:
+                if self.sa_mortgages is None:
+                    return cashflow_data
+                data = self.sa_mortgages
+            else:
+                if self.sa_mortgages is None:
+                    data = self.sa_funding
+                else:
+                    data = np.concatenate((self.sa_funding, self.sa_mortgages))
+
+        maturity_dates = np.array(data["maturity_date"], dtype="datetime64[Y]")
+        principals = np.array(data["principal"], dtype=float)
+        start_dates = np.array(data["start_date"], dtype="datetime64[Y]")
+
+        # Calculate cashflows
+
+        # receivables
+        rec_mask = maturity_dates >= pos_date
+        rec_value_date = maturity_dates[rec_mask]
+        rec_cashflows = principals[rec_mask]
+        rec_indices = np.searchsorted(
+            cashflow_data["year"],
+            rec_value_date.astype("datetime64[Y]"),
+        )
+        np.add.at(cashflow_data["cashflow"], rec_indices, rec_cashflows)
+
+        # payments
+        pay_mask = start_dates >= pos_date
+        pay_value_date = start_dates[pay_mask]
+        pay_cashflows = -1 * principals[pay_mask]
+        pay_indices = np.searchsorted(
+            cashflow_data["year"],
+            pay_value_date.astype("datetime64[Y]"),
+        )
+        np.add.at(cashflow_data["cashflow"], pay_indices, pay_cashflows)
+
+        return cashflow_data
+
+    def reset(self):
+        self.timestep = 0
+        self.liquidity = 0  # We don't have any cash at the beginning
+        _, end_date = self.interest.get_period()
+        self.pos_date = end_date.to_numpy()
+        self.hullwhite.transform()  # Start with new simulated rates
+        self.sa_mortgages = None
+        self.sa_funding = None
+
+    def get_risk_penalty(self):
+        cf = self.calculate_cashflows("all")
+        risk_penalty = (
+            (
+                abs(
+                    cf[abs(cf["cashflow"]) > self.risk_limit]["cashflow"]
+                    - self.risk_limit
+                ).sum()
+                / self.risk_limit
+            )
+            * MORTGAGE_AMOUNT
+            / 12
+        )
+        return risk_penalty
 
     def get_reward(self):
-        return self.calculate_nii()
+        nii, income, funding_cost = self.calculate_nii()
+        cf = self.calculate_cashflows("all")
+
+        # Liquidity penalty if we can not pay the projected cashflows
+        if cf[0]["cashflow"] + self.liquidity < 0:
+            liquidity_penalty = MORTGAGE_AMOUNT / 12
+        else:
+            liquidity_penalty = 0
+        risk_penalty = self.get_risk_penalty()
+        reward = nii - risk_penalty - liquidity_penalty
+        return int(reward), int(nii), int(risk_penalty), int(liquidity_penalty)
+
+    def draw_cashflows(self):
+        c = self.calculate_cashflows()
+        plt.title("Expected Cashflows")
+        plt.xlabel("X axis")
+        plt.ylabel("Y axis")
+        x = np.arange(
+            self.pos_date,
+            self.pos_date + np.timedelta64(31, "Y"),
+            dtype="datetime64[Y]",
+        )
+        y = c["cashflow"]
+        plt.plot(x, y, "-")
+        plt.show()
 
 
-def get_freq_per_year(freq: str) -> int:
-    "map freq to freq per year"
-    if freq == "annual":
-        freq_per_year = 1
-    elif freq == "semi annual":
-        freq_per_year = 2
-    else:
-        freq_per_year = 12
-    return freq_per_year
+def main():
+    bankmodel = Bankmodel()
+    bankmodel.reset()
+    actionspace = ActionSpace(len(FUNDING_TENORS))
+
+    score = 0
+    for _ in range(60):
+        bankmodel.step(actionspace.normalize_allocations(actionspace.sample()))
+        reward, _, _, _ = bankmodel.get_reward()
+        score = score + reward
+    print(f"score = {score}")
+    bankmodel.draw_cashflows()
+
+
+if __name__ == "__main__":
+    main()

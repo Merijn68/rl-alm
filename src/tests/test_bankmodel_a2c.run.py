@@ -1,20 +1,25 @@
 import gymnasium as gym
-from stable_baselines3 import PPO
+from stable_baselines3 import A2C
 import sys
 from pathlib import Path
 
-ROOT_DIR = Path(__file__).parents[2].absolute()
-sys.path.append(str(ROOT_DIR))
-from src.data.definitions import MODEL_PATH
+root_dir = Path(__file__).parents[2].absolute()
+sys.path.append(str(root_dir))
+print(root_dir)
 
+from src.data.definitions import MODEL_PATH
+from src.models.bank_env import BankEnv
 
 def main():
-    env_id = "gym_basic:bank-v3"
+    env_id = "bank-v3"
     model_name = "A2C_V_50000.zip"
+    
+    gym.register(id=env_id, entry_point=BankEnv, max_episode_steps=60)    
+    
     # Walk through the predictions from the trained model
     env = gym.make(env_id, render_mode="human")
     env = gym.wrappers.PassiveEnvChecker(env)
-    model = PPO.load(Path(MODEL_PATH, model_name), env=env)
+    model = A2C.load(Path(MODEL_PATH, model_name), env=env)
     env.set_render_output(model_name)
     obs, info = env.reset()
     score = 0
