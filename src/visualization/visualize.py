@@ -173,11 +173,40 @@ def situational_plot(
     plt.show()
 
 
+def plot_funding(
+    sa_funding: np.ndarray,
+    figsize: Tuple[int, int] = FIGSIZE,
+    name: str = "funding",
+    figurepath: Path = Path(FIGURES_PATH),
+):
+    """plot funding attracted over time"""
+    plt.figure(figsize=figsize)
+    plt.title(f"Funding attracted over time")
+    plt.xlabel("time")
+    plt.ylabel("Funding")
+    plt.ylim(0, 30)
+    data = pd.DataFrame(sa_funding)
+    data["principal"] = data["principal"] * -1
+    data["year"] = data["period"].dt.year
+    data_expanded = data.loc[data.index.repeat(data["principal"])]
+    sns.violinplot(
+        data=data_expanded,
+        x="year",
+        y="tenor",
+        palette="Set2",
+        inner="quart",
+        inner_kws=dict(box_width=15, whis_width=2, color=".8"),
+    )
+
+    plt.show()
+
+
 def plot_rewards(
     episode_rewards,
     interpolate_line=True,
     interpolate_points=100,
     figsize: Tuple[int, int] = FIGSIZE,
+    ylim: Tuple[int, int] = (-2000, 2000),
     name: str = "rewards",
     figurepath: Path = Path(FIGURES_PATH),
 ):
@@ -187,14 +216,15 @@ def plot_rewards(
     plt.xlabel("Episode")
     plt.ylabel("Reward")
     plt.xlim([0, len(episode_rewards)])
-    plt.plot(np.array(episode_rewards), label="Original Reward", color="red")
+    plt.ylim(ylim)
+    plt.plot(np.array(episode_rewards), label="Rewards", color="red")
 
     if interpolate_line:
         x = np.arange(len(episode_rewards))
         bspline = interpolate.make_interp_spline(x, episode_rewards)
         x_new = np.linspace(0, len(episode_rewards) - 1, interpolate_points)
         y_new = bspline(x_new)
-        plt.plot(x_new, y_new, label="Reward", color="blue")
+        plt.plot(x_new, y_new, label="Interpolated", color="blue")
     plt.legend()
     plt.show()
 
@@ -309,7 +339,6 @@ def curveplot(
 
     BANK_RATE_TENORS = [12, 60, 120, 240]
     SWAP_TENORS = [0, 3, 6, 9, 12, 15, 18, 24, 36, 48, 60, 84, 120, 180, 360]
-
     num_data_steps = curve_data.shape[1]
     num_sim_steps = sim_data.shape[1]
     num_steps = num_data_steps + num_sim_steps
@@ -386,7 +415,8 @@ def curveplot(
 
     plt.grid(True)
     plt.title(title)
-    plt.show()
+
     plt.savefig(Path(figurepath, name + ".svg"), bbox_inches="tight")
+    plt.show()
 
     return ax

@@ -12,3 +12,5 @@ TENSORBOARD_LOGS = ROOT_DIR / "tensorboard_logs"
 DEBUG_MODE = True
 # this depened on the location of ffmpeg on your machine
 FFMPEG_PATH = r"C:\Program Files\ffmpeg-6.0-essentials_build\bin"
+
+READ_DATA_FROM_ECB = True  # set to True to read data from ECB instead of local file

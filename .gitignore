@@ -98,6 +98,7 @@ target/
 
 # ignore all tensorboard logs
 tensorboard_logs/
+tensorboard_logs_1/
 
 # ignore models created with stable_baselines
 models/

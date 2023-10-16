@@ -20,22 +20,23 @@ from src.models.hullwhite import HullWhiteModel
 from src.models.action_space import ActionSpace
 
 RANGE_TENOR = [1, 5, 10, 20]  # Duration of fixed interest mortgages in years
-FUNDING_TENORS = [
-    1,
-    2,
-    3,
-    4,
-    5,
-    6,
-    7,
-    8,
-    9,
-    10,
-    12,
-    15,
-    20,
-    25,
-]  # Expiriment with different funding tenors
+FUNDING_TENORS = [1, 5, 10, 20]  # Expiriment with different funding tenors
+# FUNDING_TENORS = [
+#     1,
+#     2,
+#     3,
+#     4,
+#     5,
+#     6,
+#     7,
+#     8,
+#     9,
+#     10,
+#     12,
+#     15,
+#     20,
+#     25,
+# ]
 RANGE_PROBABILITIES = [
     0.08,
     0.19,
@@ -44,7 +45,7 @@ RANGE_PROBABILITIES = [
 ]  # Probabilities of selling mortgages with different durations
 MORTGAGE_AMOUNT = 1000
 BOND_AMOUNT = 1000
-MORTGAGE_SIZE = 120
+MORTGAGE_SIZE = 12
 COLUMN_DATA = [
     ("tenor", int),
     ("start_date", "datetime64[D]"),
@@ -82,7 +83,7 @@ class Bankmodel:
         self.pos_date = end_date.to_numpy()
         self.timestep = 0
         self.liquidity = 0
-        self.risk_limit = 5 * MORTGAGE_AMOUNT
+        self.risk_limit = 6 * MORTGAGE_AMOUNT
         self.sa_mortgages = None
         self.sa_funding = None
         self.funding_tenors = FUNDING_TENORS
@@ -108,6 +109,9 @@ class Bankmodel:
 
         """ If we can't fund the mortgages - we can not sell more mortgages """
         if self.liquidity < n * amount:
+            # logger.debug(
+            #     f"Not enough liquidity to fund mortgages. Mortgage size {n}, amount {amount}, {self.liquidity} < {amount*n}"
+            # )
             return
 
         # We use structured arrays to store the data - as dataframes are too slow
@@ -115,10 +119,6 @@ class Bankmodel:
         data = np.empty(n, dtype=dtypes)
         data["tenor"] = np.random.choice(RANGE_TENOR, size=n, p=probabilities)
         data["start_date"] = np.full(n, self.pos_date)
-        # delta = np.array(
-        #    [timedelta(days=365 * int(y)) for y in data["tenor"]],
-        #    dtype="timedelta64[D]",
-        # )
         delta = np.timedelta64(365, "D") * data["tenor"]
         data["maturity_date"] = data["start_date"] + delta
         data["principal"] = np.ones(n) * amount
@@ -172,7 +172,8 @@ class Bankmodel:
 
         return interpolated_rate
 
-    def buy_sell_bond(self, buy_sell, principal: float = BOND_AMOUNT, tenor: int = 5):
+    # def buy_sell_bond(self, buy_sell, principal: float = BOND_AMOUNT, tenor: int = 5):
+    def buy_sell_bond(self, buy_sell, tenor: int = 5):
         """Add Capital Markets Funding"""
         dtypes = COLUMN_DATA
         data = np.empty(1, dtype=dtypes)
@@ -183,14 +184,15 @@ class Bankmodel:
             dtype="timedelta64[D]",
         )
         data["maturity_date"] = data["start_date"] + delta
-        data["principal"] = principal * buy_sell * -1
+        data["principal"] = buy_sell * -1
         data["period"] = np.array([np.datetime64(dt, "Y") for dt in data["start_date"]])
         data["interest"] = np.array(
             [self.get_sim_zero_rate(self.timestep, tenor) for tenor in data["tenor"]]
         )
 
         # add to liquidity
-        self.liquidity += principal * buy_sell
+        # self.liquidity += principal * buy_sell
+        self.liquidity += buy_sell
 
         if self.sa_funding is None:
             self.sa_funding = data
@@ -202,7 +204,6 @@ class Bankmodel:
         We asume we can not repay the funding before maturity."""
         if timestep is not None:
             self.timestep = timestep
-
         from_date = self.pos_date
         self.pos_date = np.datetime64(
             self.pos_date.astype("datetime64[M]") + np.timedelta64(1, "M")
@@ -217,6 +218,7 @@ class Bankmodel:
                 tenor += 1
 
         # receive payments from mortgages
+        # TODO: check liquidity calculation. It may not be correct
         if self.sa_mortgages is not None:
             self.liquidity += np.where(
                 (self.sa_mortgages["maturity_date"] >= from_date)
@@ -233,12 +235,7 @@ class Bankmodel:
                 0,
             ).sum()
 
-        self.generate_mortgage_contracts(
-            int(
-                (MORTGAGE_SIZE + randint(-MORTGAGE_SIZE * 0.1, MORTGAGE_SIZE * 0.1))
-                / 12
-            )
-        )
+        self.generate_mortgage_contracts(int((MORTGAGE_SIZE + randint(-1, 1)) / 12))
         self.timestep = self.timestep + 1
 
     def calculate_nii(self) -> Tuple[float, float, float]:
@@ -258,11 +255,6 @@ class Bankmodel:
             funding_cost = (
                 (funding["interest"] / 100) * funding["principal"] / 12
             ).sum()
-
-            if funding_cost > 0:
-                print("What is going on here?")
-                print(f"funding_cost = {funding_cost}")
-                print(self.sa_funding)
 
         nii = income + funding_cost
         return nii, income, funding_cost
@@ -359,7 +351,8 @@ class Bankmodel:
 
         # Liquidity penalty if we can not pay the projected cashflows
         if cf[0]["cashflow"] + self.liquidity < 0:
-            liquidity_penalty = MORTGAGE_AMOUNT / 12
+            # liquidity_penalty = MORTGAGE_AMOUNT / 12
+            liquidity_penalty = 0
         else:
             liquidity_penalty = 0
         risk_penalty = self.get_risk_penalty()
@@ -384,11 +377,11 @@ class Bankmodel:
 def main():
     bankmodel = Bankmodel()
     bankmodel.reset()
-    actionspace = ActionSpace(len(FUNDING_TENORS))
+    actionspace = ActionSpace(len(FUNDING_TENORS), 0, BOND_AMOUNT)
 
     score = 0
     for _ in range(60):
-        bankmodel.step(actionspace.normalize_allocations(actionspace.sample()))
+        bankmodel.step(actionspace.actionspace.sample())
         reward, _, _, _ = bankmodel.get_reward()
         score = score + reward
     print(f"score = {score}")

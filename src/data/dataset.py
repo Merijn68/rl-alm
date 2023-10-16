@@ -11,13 +11,12 @@ class ECBData:
     def __init__(self):
         """Initialize ECB data object"""
         self._url_ = "https://sdw-wsrest.ecb.europa.eu/service/data/"
-        # Start date is set to include swap and bank rates data
+        # self._url_ = "https://data-api.ecb.europa.eu/service/data/"
         format = "%Y-%m-%d"
         self._start_date_ = datetime.strptime("2010-06-01", format).date()
         today = date.today()
         last_month = today.replace(day=1) - timedelta(days=1)
         self._end_date_ = last_month
-        # self._end_date_ = parse("2023-04-28")
         self.df = pd.DataFrame()
 
     def set_period(self, start_date: datetime, end_date: datetime):
@@ -28,7 +27,6 @@ class ECBData:
         self._end_date_ = end_date
         if not self.df.empty:
             self.df = self.df.loc[start_date:end_date]
-            
 
     def get_period(self) -> tuple[datetime, datetime]:
         """Get start and end date from the actual data loaded"""
@@ -43,6 +41,7 @@ class ECBData:
 
     def read_data(self):
         """Read data from ECB"""
+
         logger.info(f"reading {self.name} data from ESW.")
         url = self._url_
         key = self._key_
