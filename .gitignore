@@ -6,7 +6,6 @@ __pycache__/
 *.so
 
 # Distribution / packaging
-rl-alm/
 .Python
 env/
 build/
@@ -60,6 +59,8 @@ target/
 
 # DotEnv configuration
 .env
+rl-alm/
+venv/
 
 # Database
 *.db

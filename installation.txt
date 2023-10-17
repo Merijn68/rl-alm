@@ -34,3 +34,18 @@ conda install -c conda-forge ffmpeg
 conda install -p f:\OneDrive\Documents\GitHub\rl-alm\rl-alm ipykernel --update-deps --force-reinstall
 pip install -U scikit-learn
 pip install ipywidgets
+
+conda create --p .\venv python==3.10 ipykernel  
+conda activate .\venv
+
+Venv version:
+
+pip install ipykernel
+pip install stable-baselines3==2.1.0
+pip install matplotlib==1.16
+pip install seaborn==0.13
+pip install pathlib==1.0.1
+pip install loguru==0.7.2
+pip install scipy==1.11.3
+pip install requests==2.31
+pip install tensorboard==2.14
