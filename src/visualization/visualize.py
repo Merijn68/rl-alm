@@ -207,25 +207,40 @@ def plot_rewards(
     interpolate_points=100,
     figsize: Tuple[int, int] = FIGSIZE,
     ylim: Tuple[int, int] = (-2000, 2000),
+    rolling_line: bool = False,
+    color="red",
+    label="Rewards",
+    title: str = f"Rewards per episode",
     name: str = "rewards",
     figurepath: Path = Path(FIGURES_PATH),
 ):
     """plot episode rewards"""
     plt.figure(figsize=figsize)
-    plt.title(f"Rewards for {len(episode_rewards)} episodes")
+    plt.title(title)
     plt.xlabel("Episode")
     plt.ylabel("Reward")
     plt.xlim([0, len(episode_rewards)])
     plt.ylim(ylim)
-    plt.plot(np.array(episode_rewards), label="Rewards", color="red")
-
+    plt.plot(np.array(episode_rewards), color=color, alpha=0.2)
     if interpolate_line:
         x = np.arange(len(episode_rewards))
         bspline = interpolate.make_interp_spline(x, episode_rewards)
         x_new = np.linspace(0, len(episode_rewards) - 1, interpolate_points)
         y_new = bspline(x_new)
-        plt.plot(x_new, y_new, label="Interpolated", color="blue")
+        plt.plot(x_new, y_new, label=label, color=color)
+    if rolling_line:
+        x = np.arange(len(episode_rewards))
+        y = pd.DataFrame(episode_rewards).rolling(12).mean()
+        plt.plot(
+            x,
+            y,
+            color=color,
+            linestyle="-",
+            label=label,
+        )
+
     plt.legend()
+    plt.savefig(Path(figurepath, name + ".svg"), bbox_inches="tight")
     plt.show()
 
 

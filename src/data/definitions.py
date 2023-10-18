@@ -8,6 +8,7 @@ FIGURES_PATH = ROOT_DIR / "reports/figures"
 MODEL_PATH = ROOT_DIR / "models"
 DATA_RAW = ROOT_DIR / "data/raw"
 DATA_DEBUG = ROOT_DIR / "data/debug"
+DATA_MODEL_PATH = ROOT_DIR / "data/model"
 TENSORBOARD_LOGS = ROOT_DIR / "tensorboard_logs"
 DEBUG_MODE = True
 # this depened on the location of ffmpeg on your machine
