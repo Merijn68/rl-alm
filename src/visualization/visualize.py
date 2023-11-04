@@ -437,53 +437,6 @@ def curveplot(
     return ax
 
 
-def plot_frame(f: pd.DataFrame, m: pd.DataFrame, ax=ax):
+def plot_frame(f: pd.DataFrame, m: pd.DataFrame, ax):
     """Plot a Frame of the video of the bank model"""
-    # Plot the mortgages
-    sns.scatterplot(
-        x="maturity_date",
-        y="principal",
-        hue="tenor",
-        data=m,
-        ax=ax,
-        palette="Set2",
-        legend=False,
-    )
-    # Plot the funding
-    sns.scatterplot(
-        x="maturity_date",
-        y="principal",
-        hue="tenor",
-        data=f,
-        ax=ax,
-        palette="Set2",
-        legend=False,
-    )
-    # Plot the cashflows
-    sns.scatterplot(
-        x="maturity_date",
-        y="cashflow",
-        hue="tenor",
-        data=cf,
-        ax=ax,
-        palette="Set2",
-        legend=False,
-    )
-    ax.set_xlabel("Maturity date")
-    ax.set_ylabel("Amount")
-    ax.set_title("Bank Model")
-    ax.set_ylim(-10000, 10000)
-    ax.set_xlim(
-        datetime.strptime("2019-01-01", "%Y-%m-%d"),
-        datetime.strptime("2029-01-01", "%Y-%m-%d"),
-    )
-    ax.legend(
-        loc="upper left",
-        bbox_to_anchor=(1.05, 1),
-        borderaxespad=0.0,
-        title="Tenor",
-    )
-    ax.axhline(y=5000, color="r", linestyle="--", label="Threshold")
-    ax.axhline(y=-5000, color="r", linestyle="--")
-    ax.grid(True)
     return ax
