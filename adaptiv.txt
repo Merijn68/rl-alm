@@ -1,0 +1,48 @@
+Adaptiv 203.2
+HS VaR 3-Nov-2023
+
+FIS Risk Analytics Manager
+
+Market Prices (not included)
+Price Factors (Derived by bootstrapping)
+
+Partisioning ...
+	Per reference (deal) or per Tag
+Valuation at Horizon...
+Exclude paid today...
+Factor Groups... contribution per Risk Category
+
+
+Documents
+- Calculations - Markets VaR
+- Analysis - Calculation ?
+
+
+View - Summary
+	Marginal and incremental var
+	-> Calculations Market Var documentation
+
+
+Show: Price Factor Values - view
+	30 -> All scenarios the same
+	31 oct -> scenario different
+Show - Details
+	90
+
+Portfolio Dependency
+Return method Historical for testing data in MDA
+
+- Example of calculation
+
+- Point out specific calcualtions , drill down
+
+
+	
+
+
+
+
+
+
+
+

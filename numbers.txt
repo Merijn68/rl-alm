@@ -1,0 +1,60 @@
+
+SAC 3.000.000
+
+rollout/           |          |
+|    ep_len_mean     | 60       |
+|    ep_rew_mean     | 996      |
+| time/              |          |
+|    episodes        | 50000    |
+|    fps             | 63       |
+|    time_elapsed    | 47258    |
+|    total_timesteps | 3000000  |
+| train/             |          |
+|    actor_loss      | -57.3    |
+|    critic_loss     | 972      |
+|    ent_coef        | 0.712    |
+|    ent_coef_loss   | -0.993   |
+|    learning_rate   | 3.33e-10 |
+|    n_updates       | 2999899  |
+|    std             | 0.0593   |
+
+SAC 600.000
+
+---------------------------------
+| rollout/           |          |
+|    ep_len_mean     | 60       |
+|    ep_rew_mean     | 832      |
+| time/              |          |
+|    episodes        | 10000    |
+|    fps             | 63       |
+|    time_elapsed    | 9507     |
+|    total_timesteps | 600000   |
+| train/             |          |
+|    actor_loss      | -280     |
+|    critic_loss     | 2.16e+03 |
+|    ent_coef        | 0.43     |
+|    ent_coef_loss   | -1.64    |
+|    learning_rate   | 1.67e-09 |
+|    n_updates       | 599899   |
+|    std             | 0.0518   |
+---------------------------------
+
+SAC 600.000 Gausian ... 258 pt
+
+---------------------------------
+| rollout/           |          |
+|    ep_len_mean     | 60       |
+|    ep_rew_mean     | 1.18e+03 |
+| time/              |          |
+|    episodes        | 10000    |
+|    fps             | 70       |
+|    time_elapsed    | 8522     |
+|    total_timesteps | 600000   |
+| train/             |          |
+|    actor_loss      | -531     |
+|    critic_loss     | 717      |
+|    ent_coef        | 0.485    |
+|    ent_coef_loss   | 0.0278   |
+|    learning_rate   | 1.67e-09 |
+|    n_updates       | 599899   |
+---------------------------------

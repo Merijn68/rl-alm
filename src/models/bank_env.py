@@ -1,16 +1,14 @@
 # A gym model wrapper for the bank model
 import numpy as np
 import pandas as pd
-from pathlib import Path
 import seaborn as sns
-import matplotlib.pyplot as plt
-from matplotlib.animation import FFMpegWriter
 from gymnasium import Env
 from src.models.action_space import ActionSpace
 from src.models.observation_space import ObservationSpace
 from src.models.bank_model import Bankmodel
 from src.visualization import visualize
 from src.data.definitions import FIGURES_PATH
+from matplotlib import pyplot as plt
 
 EPISODE_LENGTH = 60
 
@@ -50,18 +48,12 @@ class BankEnv(Env):
 
         self.state = self.get_state()
 
-        # Initialize variable for mpeg writer
-        self.writer = None
-        self.figure = None
-
     def step(self, action: ActionSpace):
         # Apply action
         if not (self.action_space.contains(action)):
             print(action)
             raise ValueError("Action not in action space")
-        # allocation = self.action_space.normalize_allocations(action)
         action = self.action_space.denormalize_action(action)
-
         self.bankmodel.step(action, self.timestep)
 
         self.state = self.get_state()
@@ -95,16 +87,31 @@ class BankEnv(Env):
         info = {}
         return self.state, reward, terminated, truncated, info
 
-    def render(self):
-        # Implement viz
-        if self.render_mode == "human":
-            cf = self.bankmodel.calculate_cashflows("all")
-            self.ax.cla()
-            if len(cf) > 0:
-                sns.barplot(x=np.arange(0, len(cf)), y=cf["cashflow"], ax=self.ax)
+    def render(self) -> np.ndarray[np.uint8]:
+        """Render the current state of the bank model"""
+        frame = self.get_current_frame()
+        return frame
 
-            if self.writer is not None:
-                self.writer.grab_frame()
+    def get_current_frame(self) -> np.ndarray[np.uint8]:
+        """Get the current frame to create a video of the bank model"""
+        cf = self.bankmodel.calculate_cashflows("all")
+
+        fig, ax = plt.subplots()
+
+        if len(cf) > 0:
+            f = pd.DataFrame(self.bankmodel.sa_funding)
+            f = f[f["maturity_date"] >= self.bankmodel.pos_date]
+            m = pd.DataFrame(self.bankmodel.sa_mortgages)
+            m = m[m["maturity_date"] >= self.bankmodel.pos_date]
+
+            visualize.plot_frame(cf, f, m, ax=ax)
+
+        # Convert the Matplotlib figure to an RGB array
+        fig.canvas.draw()
+        frame = np.array(fig.canvas.renderer.buffer_rgba())
+        plt.close(fig)  # Close the Matplotlib figure
+
+        return frame
 
     def list_model(self) -> pd.DataFrame:
         """List the current situation of the bank model at each time step"""
@@ -217,17 +224,6 @@ class BankEnv(Env):
         }
         state = self.observation_space.normalize_observation(state)
 
-        # state = np.concatenate(
-        #     (
-        #         cf["cashflow"][:, np.newaxis],
-        #         spread[:, np.newaxis],
-        #         z,
-        #         i,
-        #         np.array([[liquidity]]),
-        #     ),
-        #     dtype=np.float64,
-        # ).reshape(self.observation_space.shape)
-
         if not (self.observation_space.contains(state)):
             print(state)
             raise ValueError("State not in observation space")
@@ -266,30 +262,3 @@ class BankEnv(Env):
 
     def close(self):
         super().close()
-
-    def set_render_output(self, filename: str, title: str = "Movie"):
-        if self.writer is not None:
-            self.writer.finish()
-
-        moviedata = dict(title=title, artist="M. van Miltenburg")
-        self.figure = plt.figure()
-
-        ax = self.figure.gca()
-        ax.set_title("Projected cashflows")
-        ax.set_ylim(-1000, +1000)
-        ax.set_xlim(0, 30)
-        self.ax = ax
-
-        # This will need to be changed to match your directory.
-        plt.rcParams["animation.ffmpeg_path"] = Path(
-            r"C:\Program Files\ffmpeg-6.0-essentials_build\bin", r"ffmpeg.exe"
-        )
-
-        writer = FFMpegWriter(fps=5, metadata=moviedata)
-        writer.setup(
-            self.figure,
-            Path(FIGURES_PATH, filename).with_suffix(".mp4"),
-            dpi=100,
-        )
-
-        self.writer = writer

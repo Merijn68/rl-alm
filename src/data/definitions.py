@@ -5,6 +5,7 @@ import sys
 ROOT_DIR = Path(__file__).parents[2].absolute()
 sys.path.append(str(ROOT_DIR))
 FIGURES_PATH = ROOT_DIR / "reports/figures"
+VIDEO_PATH = ROOT_DIR / "reports/videos"
 MODEL_PATH = ROOT_DIR / "models"
 DATA_RAW = ROOT_DIR / "data/raw"
 DATA_DEBUG = ROOT_DIR / "data/debug"

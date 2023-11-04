@@ -16,27 +16,7 @@ Cloning the repository
 	cd rl-alm
 	git clone https://github.com/Merijn68/rl-alm.git
 Create the environment
-	conda create -p .\rl-alm # This makes sure the environment is stored in the same directory as the source code.
-	conda activate .\rl-alm # This was neccesarary as I had no more space on C:
-
-Remove a conda environment (Is something goes wrong).
-	conda remove --name rl-alm --all
-
-conda install -c conda-forge stable-baselines3
-conda install -c conda-forge tqdm
-conda install -c conda-forge rich
-conda install -c anaconda seaborn
-conda install pathlib
-conda install loguru
-conda install pytorch==1.12.1 torchvision==0.13.1 torchaudio==0.12.1 cudatoolkit=10.2 -c pytorch
-conda install -c conda-forge tensorboard
-conda install -c conda-forge ffmpeg
-conda install -p f:\OneDrive\Documents\GitHub\rl-alm\rl-alm ipykernel --update-deps --force-reinstall
-pip install -U scikit-learn
-pip install ipywidgets
-
-conda create --p .\venv python==3.10 ipykernel  
-conda activate .\venv
+	conda create -p .\venv # This makes sure the environment is stored in the same directory as the source code.
 
 Venv version:
 
@@ -49,3 +29,5 @@ pip install loguru==0.7.2
 pip install scipy==1.11.3
 pip install requests==2.31
 pip install tensorboard==2.14
+pip install tensorboardX
+pip install imageio[ffmpeg]
