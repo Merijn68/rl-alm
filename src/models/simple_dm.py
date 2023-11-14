@@ -1,8 +1,8 @@
 # This model will simply use Duration Matching
 import numpy as np
 
-REQUIRED_FUNDING = 1000
 MAX_FUNDING_PER_TENOR = 1000
+MIN_LIQ_AMOUNT = 1000
 
 
 class Duration_matching:
@@ -27,13 +27,6 @@ class Duration_matching:
         obs = self.observation_space.denormalize_observation(obs)
         liq = obs["liquidity"]
         cf = obs["cashflows"]
-        # liq = obs[51]
-        # cf = obs[:31]
-
-        if liq > REQUIRED_FUNDING:
-            min_funding_amount = 0
-        else:
-            min_funding_amount = REQUIRED_FUNDING - liq
 
         tenors = self.bankmodel.funding_tenors
         action = np.zeros(self.action_space.shape)
@@ -43,8 +36,9 @@ class Duration_matching:
             else:
                 action[i] = cf[tenor]
 
-        if (sum(action) == 0) & (min_funding_amount > 0):
-            action[0] = min_funding_amount
+        if (sum(action) == 0) & (liq < MIN_LIQ_AMOUNT):
+            for i, tenor in enumerate(tenors):
+                action[i] = np.random.randint(0, MAX_FUNDING_PER_TENOR)
 
         action = np.clip(action, 0, MAX_FUNDING_PER_TENOR)
         action = np.array(action, dtype=np.float32)

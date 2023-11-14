@@ -17,6 +17,7 @@ class ECBData:
         today = date.today()
         last_month = today.replace(day=1) - timedelta(days=1)
         self._end_date_ = last_month
+        self._end_date_ = datetime.strptime("2022-01-01", format).date()
         self.df = pd.DataFrame()
 
     def set_period(self, start_date: datetime, end_date: datetime):
