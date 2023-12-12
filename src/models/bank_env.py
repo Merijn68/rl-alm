@@ -189,6 +189,10 @@ class BankEnv(Env):
         # Plot cashflows
         visualize.situational_plot(
             self.bankmodel.pos_date,
+            self.timestep,
+            self.bankmodel.liquidity,
+            self.total_reward,
+            self.total_risk_penalty,
             cf_proj_cashflows,
             cf_funding,
             cf_mortgages,
