@@ -43,3 +43,7 @@ Project Organization
 
 --------
 
+See below an example of the policy found by the SAC Algorythm to optimize funding.
+
+<video src='https://github.com/Merijn68/rl-alm/tree/main/reports/videos/optimal_policy.mp4' width=180/>
+
