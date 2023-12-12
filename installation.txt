@@ -31,3 +31,5 @@ pip install requests==2.31
 pip install tensorboard==2.14
 pip install tensorboardX
 pip install imageio[ffmpeg]
+pip install pdoc
+pip install pytest

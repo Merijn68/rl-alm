@@ -93,7 +93,7 @@ venv/
 *.log
 
 # ignore all movie files
-*.mp4
+# *.mp4
 
 # ignore all tensorboard logs
 tensorboard_logs/
