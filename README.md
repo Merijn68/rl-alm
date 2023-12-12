@@ -4,6 +4,12 @@ RLALM
 ALM Interest Rate Steering using Reinforcement Learning algorithms
 This repo contains the source code and test results from the my Thesis on Reinforcement Learning in Asset and Liability Management.
 
+In this repo experiments have been conducted using different RL Algorytms from Stable Baselines3 in a custom Gymnasium environment.
+
+Using Reinforcement Learning an agent can learn to optimize Interest Rate Risk Profile of a Retail Bank 
+while staying within Risk bounderies set. 
+
+
 Project Organization
 ------------
 
@@ -43,7 +49,6 @@ Project Organization
 
 --------
 
-See below an example of the policy found by the SAC Algorythm to optimize funding.
 
-<video src='https://github.com/Merijn68/rl-alm/tree/main/reports/videos/optimal_policy.mp4' width=180/>
+
 
